@@ -6,7 +6,7 @@ public class Simulation {
 	public Program program;
 	
 	// constants
-	public static final int ramsize = 134217728;
+	public static final int ramsize = 134217728 / 4; // * 4bytes
 	public static final int instructionLength = 36;
 	
 	// register
@@ -16,7 +16,7 @@ public class Simulation {
 	public boolean cz, cn, cv, cc;
 	
 	// ram
-	public byte[] ram;
+	public int[] ram;
 	
 	// meta
 	public boolean halt;
@@ -25,7 +25,7 @@ public class Simulation {
 	private Simulation() {
 		this.r = new int[32];
 		this.f = new double[32];
-		this.ram = new byte[ramsize];
+		this.ram = new int[ramsize];
 	}
 	
 	public static Simulation createSimulation(String asmFileName) {
@@ -561,6 +561,101 @@ public class Simulation {
 				this.pc = newpc;
 			}
 		}
+		return true;
+	}
+	
+	boolean proc_ldw(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			if (!verifyOplandPattern(i, "RRI")) return false;
+			int addr = fetch_r(i.oplands[1]);
+			int offset = i.oplands[2].immediate;
+			addr += offset;
+			
+			int value = ram[addr];
+			set_r(i.oplands[0], value);
+		}
+		return true;
+	}
+	boolean proc_stw(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			if (!verifyOplandPattern(i, "RRI")) return false;
+			int addr = fetch_r(i.oplands[1]);
+			int offset = i.oplands[2].immediate;
+			addr += offset;
+			
+			int value = fetch_r(i.oplands[0]);
+			ram[addr] = value;
+		}
+		return true;
+	}
+	boolean proc_lfu(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		long value = (int)ram[addr];
+		
+		double dest = fetch_f(i.oplands[0]);
+		long bits = Double.doubleToLongBits(dest);
+		
+		bits &= 4294967295L;
+		bits |= value << 32;
+		
+		set_f(i.oplands[0], Double.longBitsToDouble(bits));
+		
+		return true;
+	}
+	boolean proc_lfl(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		long value = (int)ram[addr];
+		
+		double dest = fetch_f(i.oplands[0]);
+		long bits = Double.doubleToLongBits(dest);
+		
+		bits &= (4294967295L << 32);
+		bits |= value;
+		
+		set_f(i.oplands[0], Double.longBitsToDouble(bits));
+		
+		return true;
+	}
+	boolean proc_sfu(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		double src = fetch_f(i.oplands[0]);
+		long bits = Double.doubleToLongBits(src);
+		
+		bits = bits >> 32;
+		
+		ram[addr] = (int)bits;
+		
+		return true;
+	}
+	boolean proc_sfl(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		double src = fetch_f(i.oplands[0]);
+		long bits = Double.doubleToLongBits(src);
+
+		bits &= 4294967295L;
+		
+		ram[addr] = (int)bits;
+		
 		return true;
 	}
 	

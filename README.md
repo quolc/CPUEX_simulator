@@ -27,14 +27,13 @@ Instruction Check Sheet
 * mfi
 * jmp(i)
 * cal(i)
+* ldw
+* stw
+* lfl
+* lfu
+* sfl
+* sfu
 
 ### Partially
 
 ### Yet
-
-* ldw
-* stw
-* lfl
-* sfl
-* lfu
-* sfu
