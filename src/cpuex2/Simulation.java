@@ -114,6 +114,15 @@ public class Simulation {
 		}
 		
 		if (condition) {
+			/*
+			System.out.println(instruction.raw);
+			for(int i=0; i<3; i++) {
+				if (instruction.oplands[i] != null && instruction.oplands[i].type == OplandType.R) {
+					System.out.printf("r%d=%d, ", instruction.oplands[i].index, r[instruction.oplands[i].index]);
+				}
+			}
+			System.out.println();
+			*/
 			try {
 				Method method = this.getClass().getDeclaredMethod("proc_" + instruction.opcode, Instruction.class);
 				Boolean ret = (Boolean)method.invoke(this, instruction);
@@ -129,6 +138,10 @@ public class Simulation {
 		
 		if (!jumped && !error && !halt) pc++;
 		if (pc == program.instructions.length) halt = true;
+		/*
+		try {
+		System.in.read();
+		} catch(Exception e) {}*/
 	}
 	
 	// register manipulation
@@ -185,8 +198,8 @@ public class Simulation {
 			c = a + b;
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		} else {
@@ -203,8 +216,8 @@ public class Simulation {
 			c = a + b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		}
@@ -219,20 +232,26 @@ public class Simulation {
 			c = a - b;
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		} else {
 			int a, b, c;
-			if (!verifyOplandPattern(i, "RRI")) return false;
-			a = fetch_r(i.oplands[1]);
-			b = i.oplands[2].immediate;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
 			c = a - b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		}
@@ -265,8 +284,8 @@ public class Simulation {
 			c = a * b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		}
@@ -281,8 +300,8 @@ public class Simulation {
 			c = a / b;
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 			}
 		} else {
@@ -308,8 +327,8 @@ public class Simulation {
 			c = a & b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -333,8 +352,8 @@ public class Simulation {
 			c = a | b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -358,8 +377,8 @@ public class Simulation {
 			c = ~(a | b);
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -383,8 +402,8 @@ public class Simulation {
 			c = a ^ b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -409,8 +428,8 @@ public class Simulation {
 			c = a << b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				// TODO cv, ccの判定
 //				cv = false;
 //				cc = false;
@@ -435,8 +454,8 @@ public class Simulation {
 			c = a >>> b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -460,8 +479,8 @@ public class Simulation {
 			c = a >> b;
 			set_r(i.oplands[0], c);
 			if (i.conditionset) {
-				if (c == 0)	cz = true;
-				if (c < 0)	cn = true;
+				cz = (c == 0);
+				cn = (c < 0);
 				cv = false;
 				cc = false;
 			}
@@ -510,7 +529,7 @@ public class Simulation {
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "I")) return false;
 				String label = i.oplands[0].label;
-				System.out.printf("Jump to the label %s\n", label);
+//				System.out.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					System.err.printf("Invalid label %s\n", label);
@@ -520,7 +539,7 @@ public class Simulation {
 			} else {
 				if (!verifyOplandPattern(i, "R")) return false;
 				int newpc = fetch_r(i.oplands[0]);
-				System.out.printf("Jump to the address %d\n", newpc);
+//				System.out.printf("\nJump to the address %d\n", newpc);
 				this.pc = newpc;
 			}
 		}
@@ -533,7 +552,7 @@ public class Simulation {
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "I")) return false;
 				String label = i.oplands[0].label;
-				System.out.printf("Jump to the label %s\n", label);
+//				System.out.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					System.err.printf("Invalid label %s\n", label);
@@ -550,7 +569,7 @@ public class Simulation {
 			} else {
 				if (!verifyOplandPattern(i, "R")) return false;
 				int newpc = fetch_r(i.oplands[0]);
-				System.out.printf("Jump to the address %d\n", newpc);
+//				System.out.printf("\nJump to the address %d\n", newpc);
 				
 				// リンクレジスタの更新
 				Opland opl = new Opland();
@@ -592,6 +611,7 @@ public class Simulation {
 		}
 		return true;
 	}
+
 	boolean proc_lfu(Instruction i) {
 		if (!verifyOplandPattern(i, "FRI")) return false;
 		int addr = fetch_r(i.oplands[1]);

@@ -69,9 +69,9 @@ public class Instruction {
 			}
 			
 			// condition flag
-			if (m.group().length() - i > 2) {
+			if (m.group().length() - i >= 2) {
 				try {
-					instruction.condition = Condition.valueOf(m.group().substring(i, i+2));
+					instruction.condition = Condition.valueOf(m.group().substring(i, i+2).toUpperCase());
 				} catch (Exception e) {
 					System.err.printf("Invalid Opcode Format : %s\n", line);
 					return null;

@@ -11,7 +11,7 @@ public class Main {
 		frame.setVisible(true);
 		*/
 		// test
-		Simulation simu = Simulation.createSimulation("./input/float_store_load.s");
+		Simulation simu = Simulation.createSimulation("./input/fib.s");
 		simu.initialize();
 		while(!simu.halt && !simu.error) {
 			simu.step();
