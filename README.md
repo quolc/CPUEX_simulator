@@ -11,34 +11,26 @@ Instruction Check Sheet
 
 * prt
 * hlt
-
+* (f)add(i)
+* (f)sub
+* (f)mul(i)
+* (f)div
+* and(i)
+* oor(i)
+* nor(i)
+* xor(i)
+* sll(i)
+* srl(i)
+* sra(i)
+* (f)mov
+* mif
+* mfi
+* jmp(i)
+* cal(i)
 
 ### Partially
 
-* add
-
-
 ### Yet
-
-* sub
-* mul
-* div
-
-* and
-* oor
-* nor
-* xor
-
-* sll
-* srl
-* sra
-
-* mov
-* mif
-* mfi
-
-* jmp
-* cal
 
 * ldw
 * stw

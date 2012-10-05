@@ -6,7 +6,8 @@ public class Simulation {
 	public Program program;
 	
 	// constants
-	public final int ramsize = 134217728;
+	public static final int ramsize = 134217728;
+	public static final int instructionLength = 36;
 	
 	// register
 	public int pc;
@@ -120,12 +121,14 @@ public class Simulation {
 					System.err.printf("An error happened while executing %s.\n", instruction.raw);
 					this.error = true;
 				}
+				if (instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) jumped = true;
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 		
 		if (!jumped && !error && !halt) pc++;
+		if (pc == program.instructions.length) halt = true;
 	}
 	
 	// register manipulation
@@ -174,22 +177,389 @@ public class Simulation {
 	
 	// Instructions
 	boolean proc_add(Instruction i) {
-		int a, b, c;
-		if (i.immediate) {
+		if (i.fl) {
+			double a, b, c;
+			if (!verifyOplandPattern(i, "FFF")) return false;
+			a = fetch_f(i.oplands[1]);
+			b = fetch_f(i.oplands[2]);
+			c = a + b;
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a + b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		}
+		return true;
+	}
+	boolean proc_sub(Instruction i) {
+		if (i.fl) {
+			double a, b, c;
+			if (!verifyOplandPattern(i, "FFF")) return false;
+			a = fetch_f(i.oplands[1]);
+			b = fetch_f(i.oplands[2]);
+			c = a - b;
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		} else {
+			int a, b, c;
 			if (!verifyOplandPattern(i, "RRI")) return false;
 			a = fetch_r(i.oplands[1]);
 			b = i.oplands[2].immediate;
-		} else {
-			if (!verifyOplandPattern(i, "RRR")) return false;
-			a = fetch_r(i.oplands[1]);
-			b = fetch_r(i.oplands[2]);
+			c = a - b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
 		}
-		c = a + b;
-		set_r(i.oplands[0], a + b);
-		if (i.conditionset) {
-			if (c == 0)	cz = true;
-			if (c < 0)	cn = true;
-			// TODO cv, ccの判定
+		return true;
+	}
+	boolean proc_mul(Instruction i) {
+		if (i.fl) {
+			double a, b, c;
+			if (!verifyOplandPattern(i, "FFF")) return false;
+			a = fetch_f(i.oplands[1]);
+			b = fetch_f(i.oplands[2]);
+			c = a * b;
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a * b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		}
+		return true;
+	}
+	boolean proc_div(Instruction i) {
+		if (i.fl) {
+			double a, b, c;
+			if (!verifyOplandPattern(i, "FFF")) return false;
+			a = fetch_f(i.oplands[1]);
+			b = fetch_f(i.oplands[2]);
+			c = a / b;
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+			}
+		} else {
+			return false; // 整数divは実装しない
+		}
+		return true;
+	}
+	
+	boolean proc_and(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a & b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+	boolean proc_oor(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a | b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+	boolean proc_nor(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = ~(a | b);
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+	boolean proc_xor(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a ^ b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+
+	boolean proc_sll(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a << b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				// TODO cv, ccの判定
+//				cv = false;
+//				cc = false;
+			}
+		}
+		return true;
+	}
+	boolean proc_srl(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a >>> b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+	boolean proc_sra(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a >> b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				if (c == 0)	cz = true;
+				if (c < 0)	cn = true;
+				cv = false;
+				cc = false;
+			}
+		}
+		return true;
+	}
+	
+	boolean proc_mov(Instruction i) {
+		if (i.fl) {
+			double a;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			set_f(i.oplands[0], a);
+		} else {
+			return false;
+		}
+		return true;
+	}
+	boolean proc_mif(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a;
+			if (!verifyOplandPattern(i, "FR")) return false;
+			a = fetch_r(i.oplands[1]);
+			set_f(i.oplands[0], (double)a);
+		}
+		return true;
+	}
+	boolean proc_mfi(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			double a;
+			if (!verifyOplandPattern(i, "RF")) return false;
+			a = fetch_f(i.oplands[1]);
+			set_r(i.oplands[0], (int)a);
+		}
+		return true;
+	}
+
+	boolean proc_jmp(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "I")) return false;
+				String label = i.oplands[0].label;
+				System.out.printf("Jump to the label %s\n", label);
+				Integer newpc = program.labels.get(label);
+				if (newpc == null) {
+					System.err.printf("Invalid label %s\n", label);
+					return false;
+				}
+				this.pc = newpc;
+			} else {
+				if (!verifyOplandPattern(i, "R")) return false;
+				int newpc = fetch_r(i.oplands[0]);
+				System.out.printf("Jump to the address %d\n", newpc);
+				this.pc = newpc;
+			}
+		}
+		return true;
+	}
+	boolean proc_cal(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "I")) return false;
+				String label = i.oplands[0].label;
+				System.out.printf("Jump to the label %s\n", label);
+				Integer newpc = program.labels.get(label);
+				if (newpc == null) {
+					System.err.printf("Invalid label %s\n", label);
+					return false;
+				}
+				
+				// リンクレジスタの更新
+				Opland opl = new Opland();
+				opl.type = OplandType.R;
+				opl.index = 31;
+				set_r(opl, this.pc+1);
+				
+				this.pc = newpc;
+			} else {
+				if (!verifyOplandPattern(i, "R")) return false;
+				int newpc = fetch_r(i.oplands[0]);
+				System.out.printf("Jump to the address %d\n", newpc);
+				
+				// リンクレジスタの更新
+				Opland opl = new Opland();
+				opl.type = OplandType.R;
+				opl.index = 31;
+				set_r(opl, this.pc+1);
+				
+				this.pc = newpc;
+			}
 		}
 		return true;
 	}
@@ -204,7 +574,7 @@ public class Simulation {
 	}
 	
 	boolean proc_hlt(Instruction i) {
-		System.out.println("Program Halted.");
+		System.out.println("Program is halted by hlt instruction");
 		this.halt = true;
 		return true;
 	}

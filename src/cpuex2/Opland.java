@@ -6,6 +6,7 @@ enum OplandType {
 
 public class Opland {
 	OplandType type;
-	int index;
-	int immediate;
+	int index;		// レジスタオペランド
+	int immediate;	// イミディエイトオペランド
+	String label;	// jmp系命令で使用するラベルイミディエイト
 }

@@ -53,7 +53,7 @@ public class Instruction {
 			}
 			
 			try {
-				instruction.opcode = OpCode.valueOf(m.group().substring(i, 3));
+				instruction.opcode = OpCode.valueOf(m.group().substring(i, i+3));
 			} catch (Exception e) {
 				System.err.printf("Invalid Opcode Format : %s\n", line);
 				return null;
@@ -71,7 +71,7 @@ public class Instruction {
 			// condition flag
 			if (m.group().length() - i > 2) {
 				try {
-					instruction.condition = Condition.valueOf(m.group().substring(i, 2));
+					instruction.condition = Condition.valueOf(m.group().substring(i, i+2));
 				} catch (Exception e) {
 					System.err.printf("Invalid Opcode Format : %s\n", line);
 					return null;
@@ -98,20 +98,26 @@ public class Instruction {
 			if (m.find()) {
 				Opland opland = new Opland();
 				instruction.oplands[i] = opland;
-				switch (m.group().charAt(0)) {
-				case 'r':
-					opland.type = OplandType.R;
-					opland.index = Integer.valueOf(m.group().substring(1));
-					break;
-				case 'f':
-					opland.type = OplandType.F;
-					opland.index = Integer.valueOf(m.group().substring(1));
-					break;
-				default:
+				// jmp系命令ではラベルをイミディエイトにするので別処理
+				if ((instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) && instruction.immediate) {
 					opland.type = OplandType.I;
-					opland.immediate = Integer.valueOf(m.group());
-					break;
-				}	
+					opland.label = m.group();
+				} else {
+					switch (m.group().charAt(0)) {
+					case 'r':
+						opland.type = OplandType.R;
+						opland.index = Integer.valueOf(m.group().substring(1));
+						break;
+					case 'f':
+						opland.type = OplandType.F;
+						opland.index = Integer.valueOf(m.group().substring(1));
+						break;
+					default:
+						opland.type = OplandType.I;
+						opland.immediate = Integer.valueOf(m.group());
+						break;
+					}
+				}
 			} else {
 				instruction.oplands[i] = null;
 			}
