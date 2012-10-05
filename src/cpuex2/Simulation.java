@@ -174,17 +174,22 @@ public class Simulation {
 	
 	// Instructions
 	boolean proc_add(Instruction i) {
-		int a, b;
+		int a, b, c;
 		if (i.immediate) {
 			if (!verifyOplandPattern(i, "RRI")) return false;
 			a = fetch_r(i.oplands[1]);
 			b = i.oplands[2].immediate;
-			set_r(i.oplands[0], a + b);
 		} else {
 			if (!verifyOplandPattern(i, "RRR")) return false;
 			a = fetch_r(i.oplands[1]);
 			b = fetch_r(i.oplands[2]);
-			set_r(i.oplands[0], a + b);
+		}
+		c = a + b;
+		set_r(i.oplands[0], a + b);
+		if (i.conditionset) {
+			if (c == 0)	cz = true;
+			if (c < 0)	cn = true;
+			// TODO cv, ccの判定
 		}
 		return true;
 	}
