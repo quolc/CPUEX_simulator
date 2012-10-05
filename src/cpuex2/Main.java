@@ -12,5 +12,9 @@ public class Main {
 		*/
 		// test
 		Simulation simu = Simulation.createSimulation("./input/one_add_one.s");
+		simu.initialize();
+		while(!simu.halt && !simu.error) {
+			simu.step();
+		}
 	}
 }

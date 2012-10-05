@@ -1,25 +1,19 @@
 package cpuex2;
 
-import java.util.*;
 import java.util.regex.*;
 
 enum OpCode {
-	mov, mif, mfi,
-	jmp, cal,
-	ldw, stw, lfl, sfl, lfu, sfu,
 	add, sub, mul, div,
 	and, oor, nor, xor,
 	sll, srl, sra,
+	mov, mif, mfi,
+	jmp, cal,
+	ldw, stw, lfl, sfl, lfu, sfu,
 	hlt, prt
 }
 enum Condition {
 	AL, EQ, NE, MI, PL, VS, VC,
 	CS, CC, HI, LS, GE, LT, GT, LE
-}
-enum OpType {
-	R,	// 3 opland, 例外はjump, call(1op), fmv, mif, mfi (2op)
-	I,	// 3 opland, 例外はなし
-	J	// 1 opland, 例外はなし
 }
 
 public class Instruction {
@@ -28,11 +22,13 @@ public class Instruction {
 	public boolean conditionset;
 	public boolean fl;
 	public boolean immediate;
-	public Opland op1, op2, op3;
-	public OpType type;
+	public Opland[] oplands;
 	public String raw;
 	
+	public static final int maximum_oplands = 3;
+	
 	private Instruction() {
+		this.oplands = new Opland[maximum_oplands]; // maximum opland number = 3
 	}
 	
 	// Parse assembly-line & construct an Instance of Instruction
@@ -97,70 +93,28 @@ public class Instruction {
 			}
 		}
 		
-		// opland1
-		if (m.find()) {
-			Opland opland = new Opland();
-			instruction.op1 = opland;
-			switch (m.group().charAt(0)) {
-			case 'r':
-				opland.type = OplandType.R;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			case 'f':
-				opland.type = OplandType.F;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			default:
-				opland.type = OplandType.I;
-				opland.immediate = Integer.valueOf(m.group());
-				break;
-			}	
-		} else {
-			instruction.op1 = null;
-		}
-		
-		// opland2
-		if (m.find()) {
-			Opland opland = new Opland();
-			instruction.op2 = opland;
-			switch (m.group().charAt(0)) {
-			case 'r':
-				opland.type = OplandType.R;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			case 'f':
-				opland.type = OplandType.F;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			default:
-				opland.type = OplandType.I;
-				opland.immediate = Integer.valueOf(m.group());
-				break;
-			}	
-		} else {
-			instruction.op2 = null;
-		}
-		
-		// opland3
-		if (m.find()) {
-			Opland opland = new Opland();
-			instruction.op3 = opland;
-			switch (m.group().charAt(0)) {
-			case 'r':
-				opland.type = OplandType.R;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			case 'f':
-				opland.type = OplandType.F;
-				opland.index = Integer.valueOf(m.group().substring(1));
-				break;
-			default:
-				opland.type = OplandType.I;
-				opland.immediate = Integer.valueOf(m.group());
-				break;
-			}	
-		} else {
-			instruction.op3 = null;
+		// oplands
+		for (int i=0; i<maximum_oplands; i++) {
+			if (m.find()) {
+				Opland opland = new Opland();
+				instruction.oplands[i] = opland;
+				switch (m.group().charAt(0)) {
+				case 'r':
+					opland.type = OplandType.R;
+					opland.index = Integer.valueOf(m.group().substring(1));
+					break;
+				case 'f':
+					opland.type = OplandType.F;
+					opland.index = Integer.valueOf(m.group().substring(1));
+					break;
+				default:
+					opland.type = OplandType.I;
+					opland.immediate = Integer.valueOf(m.group());
+					break;
+				}	
+			} else {
+				instruction.oplands[i] = null;
+			}
 		}
 		
 		instruction.raw = line;
