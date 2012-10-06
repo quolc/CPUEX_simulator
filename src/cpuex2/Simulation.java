@@ -1,5 +1,6 @@
 package cpuex2;
 
+import java.util.*;
 import java.lang.reflect.*;
 
 public class Simulation {
@@ -21,11 +22,21 @@ public class Simulation {
 	// meta
 	public boolean halt;
 	public boolean error;
+	public int total;
+	Map<OpCode, Method> proc_dic;
 	
 	private Simulation() {
 		this.r = new int[32];
 		this.f = new double[32];
 		this.ram = new int[ramsize];
+		this.proc_dic = new HashMap<OpCode, Method>();
+		
+		for (OpCode code : OpCode.values()) {
+			try {
+				Method method = Simulation.class.getDeclaredMethod("proc_" + code.toString(), Instruction.class);
+				proc_dic.put(code, method);
+			} catch (Exception e) {}
+		}
 	}
 	
 	public static Simulation createSimulation(String asmFileName) {
@@ -53,6 +64,7 @@ public class Simulation {
 		
 		this.halt = false;
 		this.error = false;
+		this.total = 0;
 	}
 	
 	public void initialize(String ramFileName) {
@@ -61,6 +73,7 @@ public class Simulation {
 	
 	public void step() {
 		Instruction instruction = program.instructions[pc];
+		total++;
 		boolean jumped = false;
 		
 		// condition flag
@@ -114,17 +127,8 @@ public class Simulation {
 		}
 		
 		if (condition) {
-			/*
-			System.out.println(instruction.raw);
-			for(int i=0; i<3; i++) {
-				if (instruction.oplands[i] != null && instruction.oplands[i].type == OplandType.R) {
-					System.out.printf("r%d=%d, ", instruction.oplands[i].index, r[instruction.oplands[i].index]);
-				}
-			}
-			System.out.println();
-			*/
 			try {
-				Method method = this.getClass().getDeclaredMethod("proc_" + instruction.opcode, Instruction.class);
+				Method method = (Method)proc_dic.get(instruction.opcode);
 				Boolean ret = (Boolean)method.invoke(this, instruction);
 				if (!ret) {
 					System.err.printf("An error happened while executing %s.\n", instruction.raw);
@@ -138,30 +142,28 @@ public class Simulation {
 		
 		if (!jumped && !error && !halt) pc++;
 		if (pc == program.instructions.length) halt = true;
-		/*
-		try {
-		System.in.read();
-		} catch(Exception e) {}*/
 	}
 	
 	// register manipulation
 	int fetch_r(Opland o) {
-		if (o.index == 0) return 0;
-		else return this.r[o.index];
+		if (o.index == 0)
+			return 0;
+		else
+			return this.r[o.index];
 	}
 	double fetch_f(Opland o) {
-		if (o.index == 0) return 0.0;
-		else return this.f[o.index];
+		if (o.index == 0)
+			return 0.0;
+		else
+			return this.f[o.index];
 	}
 	void set_r(Opland o, int v) {
-		if (o.index != 0) {
+		if (o.index != 0)
 			this.r[o.index] = v;
-		}
 	}
 	void set_f(Opland o, double v) {
-		if (o.index != 0) {
+		if (o.index != 0)
 			this.f[o.index] = v;
-		}
 	}
 	
 	// Pattern例: "RRR"
@@ -200,7 +202,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = false;
+				cc = false;
 			}
 		} else {
 			int a, b, c;
@@ -218,7 +221,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = (a>0 && b>0 && c<0); // 正＋正＝負のとき
+				cc = false;
 			}
 		}
 		return true;
@@ -234,7 +238,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = false;
+				cc = false;
 			}
 		} else {
 			int a, b, c;
@@ -252,7 +257,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = (a > 0 && b < 0 && c < 0);
+				cc = false;
 			}
 		}
 		return true;
@@ -268,7 +274,8 @@ public class Simulation {
 			if (i.conditionset) {
 				if (c == 0)	cz = true;
 				if (c < 0)	cn = true;
-				// TODO cv, ccの判定
+				cv = false;
+				cc = false;
 			}
 		} else {
 			int a, b, c;
@@ -286,7 +293,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = false;
+				cc = false;
 			}
 		}
 		return true;
@@ -302,7 +310,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
+				cv = false;
+				cc = false;
 			}
 		} else {
 			return false; // 整数divは実装しない
@@ -430,9 +439,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				// TODO cv, ccの判定
-//				cv = false;
-//				cc = false;
+				cv = (a > 0 && c < 0);
+				cc = false;
 			}
 		}
 		return true;

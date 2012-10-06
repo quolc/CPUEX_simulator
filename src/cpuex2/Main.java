@@ -16,5 +16,6 @@ public class Main {
 		while(!simu.halt && !simu.error) {
 			simu.step();
 		}
+		System.out.printf("(total %d instructions executed)", simu.total);
 	}
 }
