@@ -49,7 +49,7 @@ public class Program {
 					line = line.trim();
 					Utility.println(line);
 					if (line.indexOf(':') != line.length() - 1) {
-						System.err.printf("Invalid Label Formatting on Line %d\n", l);
+						Utility.errPrintf("Invalid Label Formatting on Line %d\n", l);
 						return null;
 					}
 					String label = line.substring(0, line.length()-1);

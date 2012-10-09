@@ -3,7 +3,7 @@ package cpuex2;
 import java.util.regex.*;
 
 enum OpCode {
-	add, sub, mul, div,
+	add, sub, mul, inv,
 	and, oor, nor, xor,
 	sll, srl, sra,
 	mov, mif, mfi,

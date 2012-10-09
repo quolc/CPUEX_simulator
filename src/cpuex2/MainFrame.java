@@ -246,7 +246,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			});
 		}
 		
-		final DefaultTableModel tm = new DefaultTableModel(rowData.toArray(new String[][]{}), colNames);
+		final DefaultTableModel tm = new DefaultTableModel(rowData.toArray(new String[][]{}), colNames) {
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
 		
 		this.registerTable = new JTable(tm) {
 			@Override public Component prepareRenderer(
@@ -266,10 +271,10 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			}
 		};
 //		this.registerTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		this.registerTable.getColumn("Reg1").setPreferredWidth(50);
-		this.registerTable.getColumn("Reg2").setPreferredWidth(50);
-		this.registerTable.getColumn("Val1").setPreferredWidth(50);
-		this.registerTable.getColumn("Val2").setPreferredWidth(50);
+		this.registerTable.getColumn("Reg1").setPreferredWidth(30);
+		this.registerTable.getColumn("Reg2").setPreferredWidth(30);
+		this.registerTable.getColumn("Val1").setPreferredWidth(70);
+		this.registerTable.getColumn("Val2").setPreferredWidth(70);
 		
 		this.registerPane = new JScrollPane(this.registerTable);
 		this.registerPane.setSize(new Dimension(100, 600));
@@ -356,7 +361,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				String.format("r%d" + (cr[i] ? " " : ""), i),
 				Integer.toString(this.currentSimulation.r[i]),
 				String.format("f%d" + (cf[i] ? " " : ""), i),
-				Double.toString(this.currentSimulation.f[i])
+				Float.toString(this.currentSimulation.f[i])
 			});
 		}
 	}
@@ -378,6 +383,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			}
 		}
 		
+		if (e.getActionCommand().equals("run")) {
+			this.runSimulation();
+		}
 		if (e.getActionCommand().equals("halt")) {
 			this.haltSimulation();
 		}
@@ -397,8 +405,6 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.updateRegister(true);
 			break;
 		case EXIT:
-			this.updateCode();
-			this.updateRegister(true);
 			this.statusBar.setText("Exit.");
 			break;
 		}
@@ -407,7 +413,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	public void loadAssemblyFile(File asmFile) {
 		this.haltSimulation();
 		
-		this.currentSimulation = Simulation.createSimulation(asmFile);
+		Simulation newSimulation = Simulation.createSimulation(asmFile);
+		if (newSimulation == null) {
+			this.statusBar.setText("Failed to load file.");
+			return;
+		}
+		this.currentSimulation = newSimulation;
 		this.initializeSimulation();
 		this.updateCode();
 		this.statusBar.setText("Loaded Assembly File.");
@@ -420,6 +431,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		this.currentSimulation.initialize();
 		this.statusBar.setText("Initialized.");
+	}
+	
+	// Simulation Control
+	public void runSimulation () {
+		if (this.currentSimulation == null) return;
+		if (this.currentSimulation.running) return;
+		
+		// TODO start running
 	}
 	
 	public void haltSimulation() {

@@ -1,8 +1,10 @@
 package cpuex2;
 
-import java.io.*;
-import java.util.*;
-import java.lang.reflect.*;
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Simulation {
 	public Program program;
@@ -217,7 +219,7 @@ public class Simulation {
 				Method method = (Method)proc_dic.get(instruction.opcode);
 				Boolean ret = (Boolean)method.invoke(this, instruction);
 				if (!ret) {
-					System.err.printf("An error happened while executing %s.\n", instruction.raw);
+					Utility.errPrintf("An error happened while executing %s.\n", instruction.raw);
 					this.error = true;
 				}
 				if (instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) jumped = true;
@@ -298,7 +300,7 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = false;
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
 				cc = false;
 			}
 		} else {
@@ -317,8 +319,10 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = (a>0 && b>0 && c<0); // 正＋正＝負のとき
-				cc = false;
+				cv = ((a>0 && b>0 && c<0) || (a<0 && b<0 && c>0)); // 正+正=負, 負+負=正
+				long a2 = (a > 0) ? a : (1L << 32) + a;
+				long b2 = (b > 0) ? b : (1L << 32) + b;
+				cc = ((a2+b2) >> 32) == 1;
 			}
 		}
 		return true;
@@ -334,7 +338,7 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = false;
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
 				cc = false;
 			}
 		} else {
@@ -353,8 +357,10 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = (a > 0 && b < 0 && c < 0);
-				cc = false;
+				cv = ((a>0 && b<0 && c<0) || (a<0 && b>0 && c>0)); // 正-負=負, 負-正=正
+				long a2 = (a > 0) ? a : (1L << 32) + a;
+				long b2 = (b > 0) ? b : (1L << 32) + b;
+				cc = ((a2+b2) >> 32) == 1;
 			}
 		}
 		return true;
@@ -370,7 +376,7 @@ public class Simulation {
 			if (i.conditionset) {
 				if (c == 0)	cz = true;
 				if (c < 0)	cn = true;
-				cv = false;
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
 				cc = false;
 			}
 		} else {
@@ -395,18 +401,17 @@ public class Simulation {
 		}
 		return true;
 	}
-	boolean proc_div(Instruction i) {
+	boolean proc_inv(Instruction i) {
 		if (i.fl) {
-			float a, b, c;
-			if (!verifyOplandPattern(i, "FFF")) return false;
+			float a, c;
+			if (!verifyOplandPattern(i, "FF")) return false;
 			a = fetch_f(i.oplands[1]);
-			b = fetch_f(i.oplands[2]);
-			c = a / b;
+			c = 1 / a;
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = false;
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
 				cc = false;
 			}
 		} else {
@@ -535,8 +540,8 @@ public class Simulation {
 			if (i.conditionset) {
 				cz = (c == 0);
 				cn = (c < 0);
-				cv = (a > 0 && c < 0);
-				cc = false;
+				cv = false;
+				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
 			}
 		}
 		return true;
@@ -561,7 +566,7 @@ public class Simulation {
 				cz = (c == 0);
 				cn = (c < 0);
 				cv = false;
-				cc = false;
+				cc = ((a >> (b-1)) & 1) == 1;
 			}
 		}
 		return true;
@@ -586,7 +591,7 @@ public class Simulation {
 				cz = (c == 0);
 				cn = (c < 0);
 				cv = false;
-				cc = false;
+				cc = ((a >> (b-1)) & 1) == 1;
 			}
 		}
 		return true;
@@ -636,7 +641,7 @@ public class Simulation {
 //				Utility.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
-					System.err.printf("Invalid label %s\n", label);
+					Utility.errPrintf("Invalid label %s\n", label);
 					return false;
 				}
 				this.pc = newpc;
@@ -659,7 +664,7 @@ public class Simulation {
 //				Utility.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
-					System.err.printf("Invalid label %s\n", label);
+					Utility.errPrintf("Invalid label %s\n", label);
 					return false;
 				}
 				
