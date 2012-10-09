@@ -8,11 +8,11 @@ enum OpCode {
 	sll, srl, sra,
 	mov, mif, mfi,
 	jmp, cal,
-	ldw, stw, lfl, sfl, lfu, sfu,
+	ldw, stw, ldf, stf,
 	hlt, prt
 }
 enum Condition {
-	AL, EQ, NE, MI, PL, VS, VC,
+	AL, NV, EQ, NE, MI, PL, VS, VC,
 	CS, CC, HI, LS, GE, LT, GT, LE
 }
 
@@ -35,7 +35,7 @@ public class Instruction {
 	public static Instruction parseLine(String line) {
 		Instruction instruction = new Instruction();
 		
-		System.out.println(line);
+		Utility.println(line);
 		
 		Pattern p = Pattern.compile("[^,\\s]+");
 		Matcher m = p.matcher(line);
@@ -100,7 +100,7 @@ public class Instruction {
 				instruction.oplands[i] = opland;
 				// jmp系命令ではラベルをイミディエイトにするので別処理
 				if ((instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) && instruction.immediate) {
-					opland.type = OplandType.I;
+					opland.type = OplandType.J;
 					opland.label = m.group();
 				} else {
 					switch (m.group().charAt(0)) {

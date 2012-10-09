@@ -12,12 +12,12 @@ public class Program {
 		this.labels = new HashMap<String, Integer>();
 	}
 	
-	public static Program parseAsmFile(String asmFileName) {
+	public static Program parseAsmFile(File asmFile) {
 		Program program = new Program();
 		ArrayList<Instruction> instructions = new ArrayList<Instruction>();
 		
 		try {
-			FileReader reader = new FileReader(asmFileName);
+			FileReader reader = new FileReader(asmFile);
 			BufferedReader br = new BufferedReader(reader);
 			int l=0;
 			
@@ -47,7 +47,7 @@ public class Program {
 					instructions.add(instruction);
 				} else { // label
 					line = line.trim();
-					System.out.println(line);
+					Utility.println(line);
 					if (line.indexOf(':') != line.length() - 1) {
 						System.err.printf("Invalid Label Formatting on Line %d\n", l);
 						return null;

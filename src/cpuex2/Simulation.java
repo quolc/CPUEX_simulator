@@ -1,5 +1,6 @@
 package cpuex2;
 
+import java.io.*;
 import java.util.*;
 import java.lang.reflect.*;
 
@@ -7,13 +8,13 @@ public class Simulation {
 	public Program program;
 	
 	// constants
-	public static final int ramsize = 134217728 / 4; // * 4bytes
+	public static final int ramsize = 1024 * 1024; // * 4bytes
 	public static final int instructionLength = 36;
 	
 	// register
 	public int pc;
 	public int[] r;
-	public double[] f;
+	public float[] f;
 	public boolean cz, cn, cv, cc;
 	
 	// ram
@@ -21,13 +22,34 @@ public class Simulation {
 	
 	// meta
 	public boolean halt;
+	public boolean exit;
 	public boolean error;
 	public int total;
 	Map<OpCode, Method> proc_dic;
 	
+	// GUIシミュレーション用
+	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
+	public boolean running;
+	public synchronized void addEventListener(SimulationEventListener listener) {
+		_listeners.add(listener);
+	}
+	public synchronized void removeEventListener(SimulationEventListener listener) {
+		_listeners.remove(listener);
+	}
+	private synchronized void fireEvent(SimulationEventType type) {
+		SimulationEvent e = new SimulationEvent(this, type);
+		for (SimulationEventListener listener : this._listeners) {
+			listener.handleSimulationEvent(e);
+		}
+	}
+	// 非同期実行を中断（その時点で割り込む。状態は保存）
+	public void stopRunning() {
+		
+	}
+	
 	private Simulation() {
 		this.r = new int[32];
-		this.f = new double[32];
+		this.f = new float[32];
 		this.ram = new int[ramsize];
 		this.proc_dic = new HashMap<OpCode, Method>();
 		
@@ -39,10 +61,10 @@ public class Simulation {
 		}
 	}
 	
-	public static Simulation createSimulation(String asmFileName) {
+	public static Simulation createSimulation(File asmFile) {
 		Simulation simulation = new Simulation();
 		
-		simulation.program = Program.parseAsmFile(asmFileName);
+		simulation.program = Program.parseAsmFile(asmFile);
 		if (simulation.program == null) return null;
 		
 		return simulation;
@@ -64,14 +86,76 @@ public class Simulation {
 		
 		this.halt = false;
 		this.error = false;
+		this.exit = false;
 		this.total = 0;
+		
+		this.running = false;
+		
+		this.fireEvent(SimulationEventType.INIT);
 	}
 	
-	public void initialize(String ramFileName) {
-		this.initialize();
+	public boolean willExecuteNextStep() {
+		Instruction instruction = program.instructions[pc];
+
+		// condition flag
+		boolean condition = false;
+		switch (instruction.condition) {
+		case AL:
+			condition = true;
+			break;
+		case EQ:
+			if (cz) condition = true;
+			break;
+		case NE:
+			if (!cz) condition = true;
+			break;
+		case MI:
+			if (cn) condition = true;
+			break;
+		case PL:
+			if (!cn) condition = true;
+			break;
+		case VS:
+			if (cv) condition = true;
+			break;
+		case VC:
+			if (!cv) condition = true;
+			break;
+		case CS:
+			if (cc) condition = true;
+			break;
+		case CC:
+			if (!cc) condition = true;
+			break;
+		case HI:
+			if (cc && !cz) condition = true;
+			break;
+		case LS:
+			if (!cc || cz) condition = true;
+			break;
+		case GE:
+			if ((cn && cv) || (!cn && !cv)) condition = true;
+			break;
+		case LT:
+			if ((cn && !cv) || (!cn && cv)) condition = true;
+			break;
+		case GT:
+			if (!cz && (cn == cv)) condition = true;
+			break;
+		case LE:
+			if (cz && (cn != cv)) condition = true;
+			break;
+		default:
+			break;
+		}
+		
+		return condition;
 	}
 	
 	public void step() {
+		if (this.pc >= this.program.instructions.length) return;
+		if (this.halt || this.exit || this.error) return;
+		
 		Instruction instruction = program.instructions[pc];
 		total++;
 		boolean jumped = false;
@@ -124,6 +208,8 @@ public class Simulation {
 		case LE:
 			if (cz && (cn != cv)) condition = true;
 			break;
+		default:
+			break;
 		}
 		
 		if (condition) {
@@ -140,8 +226,18 @@ public class Simulation {
 			}
 		}
 		
-		if (!jumped && !error && !halt) pc++;
-		if (pc == program.instructions.length) halt = true;
+		if (!jumped) pc++;
+		
+		// 同期実行時はステップごとにイベント発行
+		if (!this.running) {
+			this.fireEvent(SimulationEventType.STEP);
+		}
+		
+		// 終了判定
+		if (pc == program.instructions.length) {
+			exit = true;
+			this.fireEvent(SimulationEventType.EXIT);
+		}
 	}
 	
 	// register manipulation
@@ -151,9 +247,9 @@ public class Simulation {
 		else
 			return this.r[o.index];
 	}
-	double fetch_f(Opland o) {
+	float fetch_f(Opland o) {
 		if (o.index == 0)
-			return 0.0;
+			return 0.0f;
 		else
 			return this.f[o.index];
 	}
@@ -161,7 +257,7 @@ public class Simulation {
 		if (o.index != 0)
 			this.r[o.index] = v;
 	}
-	void set_f(Opland o, double v) {
+	void set_f(Opland o, float v) {
 		if (o.index != 0)
 			this.f[o.index] = v;
 	}
@@ -193,7 +289,7 @@ public class Simulation {
 	// Instructions
 	boolean proc_add(Instruction i) {
 		if (i.fl) {
-			double a, b, c;
+			float a, b, c;
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
@@ -229,7 +325,7 @@ public class Simulation {
 	}
 	boolean proc_sub(Instruction i) {
 		if (i.fl) {
-			double a, b, c;
+			float a, b, c;
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
@@ -265,7 +361,7 @@ public class Simulation {
 	}
 	boolean proc_mul(Instruction i) {
 		if (i.fl) {
-			double a, b, c;
+			float a, b, c;
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
@@ -301,7 +397,7 @@ public class Simulation {
 	}
 	boolean proc_div(Instruction i) {
 		if (i.fl) {
-			double a, b, c;
+			float a, b, c;
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
@@ -498,7 +594,7 @@ public class Simulation {
 	
 	boolean proc_mov(Instruction i) {
 		if (i.fl) {
-			double a;
+			float a;
 			if (!verifyOplandPattern(i, "FF")) return false;
 			a = fetch_f(i.oplands[1]);
 			set_f(i.oplands[0], a);
@@ -514,7 +610,7 @@ public class Simulation {
 			int a;
 			if (!verifyOplandPattern(i, "FR")) return false;
 			a = fetch_r(i.oplands[1]);
-			set_f(i.oplands[0], (double)a);
+			set_f(i.oplands[0], (float)a);
 		}
 		return true;
 	}
@@ -522,7 +618,7 @@ public class Simulation {
 		if (i.fl) {
 			return false;
 		} else {
-			double a;
+			float a;
 			if (!verifyOplandPattern(i, "RF")) return false;
 			a = fetch_f(i.oplands[1]);
 			set_r(i.oplands[0], (int)a);
@@ -535,9 +631,9 @@ public class Simulation {
 			return false;
 		} else {
 			if (i.immediate) {
-				if (!verifyOplandPattern(i, "I")) return false;
+				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
-//				System.out.printf("\nJump to the label %s\n", label);
+//				Utility.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					System.err.printf("Invalid label %s\n", label);
@@ -547,7 +643,7 @@ public class Simulation {
 			} else {
 				if (!verifyOplandPattern(i, "R")) return false;
 				int newpc = fetch_r(i.oplands[0]);
-//				System.out.printf("\nJump to the address %d\n", newpc);
+//				Utility.printf("\nJump to the address %d\n", newpc);
 				this.pc = newpc;
 			}
 		}
@@ -558,9 +654,9 @@ public class Simulation {
 			return false;
 		} else {
 			if (i.immediate) {
-				if (!verifyOplandPattern(i, "I")) return false;
+				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
-//				System.out.printf("\nJump to the label %s\n", label);
+//				Utility.printf("\nJump to the label %s\n", label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					System.err.printf("Invalid label %s\n", label);
@@ -577,7 +673,7 @@ public class Simulation {
 			} else {
 				if (!verifyOplandPattern(i, "R")) return false;
 				int newpc = fetch_r(i.oplands[0]);
-//				System.out.printf("\nJump to the address %d\n", newpc);
+//				Utility.printf("\nJump to the address %d\n", newpc);
 				
 				// リンクレジスタの更新
 				Opland opl = new Opland();
@@ -620,69 +716,27 @@ public class Simulation {
 		return true;
 	}
 
-	boolean proc_lfu(Instruction i) {
+	boolean proc_ldf(Instruction i) {
 		if (!verifyOplandPattern(i, "FRI")) return false;
 		int addr = fetch_r(i.oplands[1]);
 		int offset = i.oplands[2].immediate;
 		addr += offset;
 		
-		long value = (int)ram[addr];
+		float value = Float.intBitsToFloat(ram[addr]);
 		
-		double dest = fetch_f(i.oplands[0]);
-		long bits = Double.doubleToLongBits(dest);
-		
-		bits &= 4294967295L;
-		bits |= value << 32;
-		
-		set_f(i.oplands[0], Double.longBitsToDouble(bits));
+		set_f(i.oplands[0], value);
 		
 		return true;
 	}
-	boolean proc_lfl(Instruction i) {
+	boolean proc_stf(Instruction i) {
 		if (!verifyOplandPattern(i, "FRI")) return false;
 		int addr = fetch_r(i.oplands[1]);
 		int offset = i.oplands[2].immediate;
 		addr += offset;
 		
-		long value = (int)ram[addr];
+		float src = fetch_f(i.oplands[0]);
 		
-		double dest = fetch_f(i.oplands[0]);
-		long bits = Double.doubleToLongBits(dest);
-		
-		bits &= (4294967295L << 32);
-		bits |= value;
-		
-		set_f(i.oplands[0], Double.longBitsToDouble(bits));
-		
-		return true;
-	}
-	boolean proc_sfu(Instruction i) {
-		if (!verifyOplandPattern(i, "FRI")) return false;
-		int addr = fetch_r(i.oplands[1]);
-		int offset = i.oplands[2].immediate;
-		addr += offset;
-		
-		double src = fetch_f(i.oplands[0]);
-		long bits = Double.doubleToLongBits(src);
-		
-		bits = bits >> 32;
-		
-		ram[addr] = (int)bits;
-		
-		return true;
-	}
-	boolean proc_sfl(Instruction i) {
-		if (!verifyOplandPattern(i, "FRI")) return false;
-		int addr = fetch_r(i.oplands[1]);
-		int offset = i.oplands[2].immediate;
-		addr += offset;
-		
-		double src = fetch_f(i.oplands[0]);
-		long bits = Double.doubleToLongBits(src);
-
-		bits &= 4294967295L;
-		
-		ram[addr] = (int)bits;
+		ram[addr] = Float.floatToIntBits(src);
 		
 		return true;
 	}
@@ -691,13 +745,13 @@ public class Simulation {
 		if (!verifyOplandPattern(i, "R")) return false;
 		
 		int v = fetch_r(i.oplands[0]);
-		System.out.println(v);
+		Utility.println(v);
 		
 		return true;
 	}
 	
 	boolean proc_hlt(Instruction i) {
-		System.out.println("Program is halted by hlt instruction");
+		Utility.println("Program is halted by hlt instruction");
 		this.halt = true;
 		return true;
 	}

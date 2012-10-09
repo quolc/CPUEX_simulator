@@ -1,21 +1,22 @@
 package cpuex2;
 
-import javax.swing.JFrame;
+import java.io.*;
 
 public class Main {
 	public static void main(String[] args) {
+		MainFrame frame = MainFrame.getInstance();
+		
 		/*
-		JFrame frame = new JFrame("CPUEX2 Simulator");
-		frame.setBounds(200, 200, 1200, 800);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setVisible(true);
-		*/
-		// test
-		Simulation simu = Simulation.createSimulation("./input/fib.s");
+		Simulation simu = Simulation.createSimulation(new File(args[0]));
 		simu.initialize();
+		
+		long start = java.lang.System.currentTimeMillis();
 		while(!simu.halt && !simu.error) {
 			simu.step();
 		}
+		long end = java.lang.System.currentTimeMillis();
+		System.out.printf("%d ms (%d instructions/sec)\n", end - start, simu.total / (end-start) * 1000);
 		System.out.printf("(total %d instructions executed)", simu.total);
+		*/
 	}
 }
