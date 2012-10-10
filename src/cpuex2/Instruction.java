@@ -112,6 +112,14 @@ public class Instruction {
 						opland.type = OplandType.F;
 						opland.index = Integer.valueOf(m.group().substring(1));
 						break;
+					case 'h':
+						opland.type = OplandType.AH;
+						opland.label = m.group().substring(4, m.group().length()-1);
+						break;
+					case 'l':
+						opland.type = OplandType.AL;
+						opland.label = m.group().substring(4, m.group().length()-1);
+						break;
 					default:
 						opland.type = OplandType.I;
 						opland.immediate = Integer.valueOf(m.group());

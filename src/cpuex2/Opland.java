@@ -1,7 +1,7 @@
 package cpuex2;
 
 enum OplandType {
-	R, F, I, J
+	R, F, I, J, AH, AL // R:r1 F:f1 I:100 J:label AH:h16(label) AL:l16(label)
 }
 
 public class Opland {

@@ -32,6 +32,8 @@ public class Simulation {
 	// GUIシミュレーション用
 	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
 	public boolean running;
+	public boolean fireable; // fireする必要がないときはfalseにしておくと軽く動く
+	
 	public synchronized void addEventListener(SimulationEventListener listener) {
 		_listeners.add(listener);
 	}
@@ -39,14 +41,22 @@ public class Simulation {
 		_listeners.remove(listener);
 	}
 	private synchronized void fireEvent(SimulationEventType type) {
-		SimulationEvent e = new SimulationEvent(this, type);
+		if (!fireable) return;
+		SimulationEvent e = new SimulationEvent(this, type, null);
 		for (SimulationEventListener listener : this._listeners) {
 			listener.handleSimulationEvent(e);
 		}
 	}
-	// 非同期実行を中断（その時点で割り込む。状態は保存）
+	private synchronized void fireEvent(SimulationEventType type, Object param) {
+		if (!fireable) return;
+		SimulationEvent e = new SimulationEvent(this, type, param);
+		for (SimulationEventListener listener : this._listeners) {
+			listener.handleSimulationEvent(e);
+		}
+	}
 	public void stopRunning() {
-		
+		// 非同期実行を中断（その時点で割り込む。状態は保存）
+			
 	}
 	
 	private Simulation() {
@@ -92,6 +102,7 @@ public class Simulation {
 		this.total = 0;
 		
 		this.running = false;
+		this.fireable = true;
 		
 		this.fireEvent(SimulationEventType.INIT);
 	}
@@ -604,7 +615,10 @@ public class Simulation {
 			a = fetch_f(i.oplands[1]);
 			set_f(i.oplands[0], a);
 		} else {
-			return false;
+			int a;
+			if (!verifyOplandPattern(i, "RR")) return false;
+			a = fetch_r(i.oplands[1]);
+			set_r(i.oplands[0], a);
 		}
 		return true;
 	}
@@ -717,6 +731,8 @@ public class Simulation {
 			
 			int value = fetch_r(i.oplands[0]);
 			ram[addr] = value;
+			
+			this.fireEvent(SimulationEventType.MEMORY);
 		}
 		return true;
 	}
@@ -742,7 +758,8 @@ public class Simulation {
 		float src = fetch_f(i.oplands[0]);
 		
 		ram[addr] = Float.floatToIntBits(src);
-		
+
+		this.fireEvent(SimulationEventType.MEMORY);
 		return true;
 	}
 	
@@ -750,7 +767,8 @@ public class Simulation {
 		if (!verifyOplandPattern(i, "R")) return false;
 		
 		int v = fetch_r(i.oplands[0]);
-		Utility.println(v);
+		Utility.printf("%d\n", v);
+		this.fireEvent(SimulationEventType.PRINT, v);
 		
 		return true;
 	}

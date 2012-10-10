@@ -55,6 +55,21 @@ public class Program {
 					String label = line.substring(0, line.length()-1);
 					program.labels.put(label, instructions.size());
 				}
+				
+				// h16, l16の処理
+				for (Instruction instruction : instructions) {
+					for (Opland opland : instruction.oplands) {
+						if (opland == null) break;
+						if (opland.type == OplandType.AH) {
+							opland.type = OplandType.I;
+							opland.immediate = program.labels.get(opland.label) >> 16;
+						}
+						if (opland.type == OplandType.AL) {
+							opland.type = OplandType.I;
+							opland.immediate = program.labels.get(opland.label) & 65535;
+						}
+					}
+				}
 			}
 			
 			br.close();

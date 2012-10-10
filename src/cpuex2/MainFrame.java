@@ -14,8 +14,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	JMenuBar menuBar;
 	JToolBar toolBar;
 	JLabel statusBar;
-	JTable codeTable, registerTable;
-	JScrollPane registerPane;
+	JTable codeTable, registerTable, memoryTable;
+	JTextArea outputArea;
+	JScrollPane registerPane, outputPane, memoryPane;
 	JSplitPane mainPane, upperPane, lowerPane;
 	
 	Map<Integer, Integer> pc2rowMap;
@@ -64,6 +65,8 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		// initialize main components
 		this.initializeCodeView();
 		this.initializeRegisterView();
+		this.initializeMemoryView();
+		this.initializeOutputView();
 		
 		// レイアウトの細かい調整
 		this.pack();
@@ -71,6 +74,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.setVisible(true);
 		this.mainPane.setDividerLocation(0.8);
 		this.upperPane.setDividerLocation(0.8);
+		this.lowerPane.setDividerLocation(0.7);
 		this.registerPane.getColumnHeader().setVisible(false);
 		
 		// Initialize Logical Components
@@ -270,22 +274,57 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				return c;
 			}
 		};
-//		this.registerTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		this.registerTable.getColumn("Reg1").setPreferredWidth(30);
 		this.registerTable.getColumn("Reg2").setPreferredWidth(30);
 		this.registerTable.getColumn("Val1").setPreferredWidth(70);
 		this.registerTable.getColumn("Val2").setPreferredWidth(70);
 		
 		this.registerPane = new JScrollPane(this.registerTable);
-		this.registerPane.setSize(new Dimension(100, 600));
+		this.registerPane.setSize(new Dimension(200, 600));
 		
 		this.upperPane.add(this.registerPane);
 	}
 	public void initializeMemoryView() {
+		String[] colNames = {
+				"Address",
+				"0",
+				"4",
+				"8",
+				"c",
+				"Ascii"
+			};
+		ArrayList<String[]> rowData = new ArrayList<String[]>();
+		for (int i=0; i<1024*1024; i+=4) { // 1行に4word表示, 全部で1024*1024word
+			rowData.add(new String[] {
+				String.format("0x%06x", i*4),
+				"00000000",
+				"00000000",
+				"00000000",
+				"00000000",
+				".... .... .... ...."
+			});
+		}
 		
+		final DefaultTableModel tm = new DefaultTableModel(rowData.toArray(new String[][]{}), colNames) {
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+		};
+		
+		this.memoryTable = new JTable(tm) {
+			
+		};
+		
+		this.memoryPane = new JScrollPane(this.memoryTable);
+		this.memoryPane.setSize(new Dimension(800, 200));
+		
+		this.lowerPane.add(this.memoryPane);
 	}
 	public void initializeOutputView() {
-		
+		this.outputArea = new JTextArea();
+		this.outputPane = new JScrollPane(this.outputArea);
+		this.lowerPane.add(this.outputPane);
 	}
 	
 	// Visual Update
@@ -341,8 +380,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		mt.setRowCount(0);
 		
+		String pcstr = Integer.toString(this.currentSimulation.pc);
+		if (this.currentSimulation.halt) pcstr = "halt";
+		if (this.currentSimulation.exit) pcstr = "exit";
 		mt.addRow(new String[]{
-			"pc", this.currentSimulation.exit ? "exit" : Integer.toString(this.currentSimulation.pc), "", ""
+			"pc", pcstr, "", ""
 		});
 		mt.addRow(new String[] {
 			"Z" + (cz ? " " : ""),
@@ -363,6 +405,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				String.format("f%d" + (cf[i] ? " " : ""), i),
 				Float.toString(this.currentSimulation.f[i])
 			});
+		}
+	}
+	public void updateMemory(final boolean coloring) {
+		DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
+		
+		for (int i=0; i<1024*1024; i+=4) { // 1行に4word表示, 全部で1024*1024word
+			mt.setValueAt("11111111", i/4, i%4+1);
 		}
 	}
 	
@@ -399,6 +448,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		case INIT:
 			this.updateCode();
 			this.updateRegister(false);
+			this.updateMemory(false);
 			break;
 		case STEP:
 			this.updateCode();
@@ -406,6 +456,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			break;
 		case EXIT:
 			this.statusBar.setText("Exit.");
+			break;
+		case PRINT:
+			this.outputArea.append(String.format("%d\n", e.param));
+			break;
+		case MEMORY:
+			this.updateMemory(true);
 			break;
 		}
 	}
