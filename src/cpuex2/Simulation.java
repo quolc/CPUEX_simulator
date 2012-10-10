@@ -732,7 +732,7 @@ public class Simulation {
 			int value = fetch_r(i.oplands[0]);
 			ram[addr] = value;
 			
-			this.fireEvent(SimulationEventType.MEMORY);
+			this.fireEvent(SimulationEventType.MEMORY, addr);
 		}
 		return true;
 	}
@@ -758,8 +758,8 @@ public class Simulation {
 		float src = fetch_f(i.oplands[0]);
 		
 		ram[addr] = Float.floatToIntBits(src);
-
-		this.fireEvent(SimulationEventType.MEMORY);
+		
+		this.fireEvent(SimulationEventType.MEMORY, addr);
 		return true;
 	}
 	

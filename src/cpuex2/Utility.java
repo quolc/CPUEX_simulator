@@ -1,7 +1,7 @@
 package cpuex2;
 
 public class Utility {
-	static final boolean showOnTerminal = true;
+	static final boolean showOnTerminal = false;
 	
 	public static void print(String str) {
 		if (showOnTerminal)

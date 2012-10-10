@@ -16,7 +16,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	JLabel statusBar;
 	JTable codeTable, registerTable, memoryTable;
 	JTextArea outputArea;
-	JScrollPane registerPane, outputPane, memoryPane;
+	JScrollPane codePane, registerPane, outputPane, memoryPane;
 	JSplitPane mainPane, upperPane, lowerPane;
 	
 	Map<Integer, Integer> pc2rowMap;
@@ -110,17 +110,21 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuDebug.add(menuPause);
 		menuDebug.add(menuHalt);
 		menuDebug.addSeparator();
+		menuDebug.add(menuStep);
 		
 		menuOpen.setActionCommand("open");
 		menuExit.setActionCommand("exit");
 		menuRun.setActionCommand("run");
 		menuPause.setActionCommand("pause");
 		menuHalt.setActionCommand("halt");
+		menuStep.setActionCommand("step");
 		
 		menuOpen.addActionListener(this);
 		menuExit.addActionListener(this);
 		menuRun.addActionListener(this);
+		menuPause.addActionListener(this);
 		menuHalt.addActionListener(this);
+		menuStep.addActionListener(this);
 	}
 	public void initializeToolBar() {
 		this.toolBar = new JToolBar();
@@ -219,10 +223,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.codeTable.getColumn("Opland2").setPreferredWidth(100);
 		this.codeTable.getColumn("Opland3").setPreferredWidth(100);
 		
-		JScrollPane sp = new JScrollPane(this.codeTable);
-		sp.setSize(new Dimension(750, 600));
+		this.codePane = new JScrollPane(this.codeTable);
 		
-		this.upperPane.add(sp);
+		this.upperPane.add(this.codePane);
 	}
 	public void initializeRegisterView() {
 		String[] colNames = {
@@ -286,21 +289,21 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	}
 	public void initializeMemoryView() {
 		String[] colNames = {
-				"Address",
+				"Address (Word)",
 				"0",
-				"4",
-				"8",
-				"c",
-				"Ascii"
+				"1",
+				"2",
+				"3",
+//				"Ascii"
 			};
 		ArrayList<String[]> rowData = new ArrayList<String[]>();
-		for (int i=0; i<1024*1024; i+=4) { // 1行に4word表示, 全部で1024*1024word
+		for (int i=0; i<this.currentSimulation.ramsize; i+=4) { // 1行に4word表示, 全部で1024*1024word
 			rowData.add(new String[] {
-				String.format("0x%06x", i*4),
-				"00000000",
-				"00000000",
-				"00000000",
-				"00000000",
+				String.format("0x%06x", i),
+				"00000000 (0)",
+				"00000000 (0)",
+				"00000000 (0)",
+				"00000000 (0)",
 				".... .... .... ...."
 			});
 		}
@@ -332,6 +335,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		DefaultTableModel mt = (DefaultTableModel)this.codeTable.getModel();
 		mt.setRowCount(0);
 		
+		int index=0;
 		for (int i=0; i<this.currentSimulation.program.instructions.length; i++) {
 			Instruction instruction = this.currentSimulation.program.instructions[i];
 			
@@ -342,6 +346,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 						"",
 						label.getKey()
 					});
+					index++;
 				}
 			}
 			
@@ -356,6 +361,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				instruction.oplands[1] == null ? "" : instruction.oplands[1].toString(),
 				instruction.oplands[2] == null ? "" : instruction.oplands[2].toString(),
 			});
+			
+			index++;
+			if (i == this.currentSimulation.pc) {
+				this.codeTable.scrollRectToVisible(
+					new Rectangle(
+						0, this.codeTable.getRowHeight()*(index+3), 
+						100, this.codeTable.getRowHeight()));
+			}
 		}
 	}
 	public void updateRegister(final boolean coloring) {
@@ -407,11 +420,29 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			});
 		}
 	}
-	public void updateMemory(final boolean coloring) {
-		DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
-		
-		for (int i=0; i<1024*1024; i+=4) { // 1行に4word表示, 全部で1024*1024word
-			mt.setValueAt("11111111", i/4, i%4+1);
+	String int2hex(int v) {
+		return String.format("%x%07x (%d)", v>>28, v & 268435455, v);
+	}
+	public void updateMemory(int addr, final boolean coloring) {
+		// -1はオールクリア
+		if (addr == -1) {
+			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
+			mt.setRowCount(0);
+			
+			for (int i=0; i<Simulation.ramsize; i+=4) { // 1行に4word表示, 全部で1024*1024word
+				mt.addRow(new String[] {
+					String.format("0x%06x", i),
+					"00000000 (0)",
+					"00000000 (0)",
+					"00000000 (0)",
+					"00000000 (0)",
+					".... .... .... ...."
+				});
+			}
+		} else {
+			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
+			
+			mt.setValueAt(int2hex(this.currentSimulation.ram[addr]), addr/4, addr%4+1);
 		}
 	}
 	
@@ -448,7 +479,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		case INIT:
 			this.updateCode();
 			this.updateRegister(false);
-			this.updateMemory(false);
+			this.updateMemory(-1, false);
 			break;
 		case STEP:
 			this.updateCode();
@@ -461,7 +492,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.outputArea.append(String.format("%d\n", e.param));
 			break;
 		case MEMORY:
-			this.updateMemory(true);
+			this.updateMemory((Integer)e.param, true);
 			break;
 		}
 	}
@@ -475,10 +506,10 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			return;
 		}
 		this.currentSimulation = newSimulation;
-		this.initializeSimulation();
-		this.updateCode();
-		this.statusBar.setText("Loaded Assembly File.");
 		this.currentSimulation.addEventListener(this);
+		
+		this.initializeSimulation();
+		this.statusBar.setText("Loaded Assembly File.");
 	}
 	public void initializeSimulation() {
 		if (this.currentSimulation == null) {
