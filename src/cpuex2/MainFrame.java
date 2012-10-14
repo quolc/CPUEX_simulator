@@ -329,6 +329,25 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.registerTable.getColumn("Val1").setPreferredWidth(70);
 		this.registerTable.getColumn("Val2").setPreferredWidth(70);
 		
+		this.registerTable.addMouseListener(new MouseAdapter() {
+			@Override public void mouseClicked(MouseEvent me) {
+				if(me.getClickCount()==2) {
+						if (self.currentSimulation != null) {
+						Point pt = me.getPoint();
+						int idx = registerTable.rowAtPoint(pt);
+						int idy = registerTable.columnAtPoint(pt);
+						
+						if(idx >= 0 && idy >= 0 && idy%2 == 0) {
+							String r = (String)registerTable.getValueAt(idx, idy);
+							r = r.trim().replace("*", "");
+							if (r.equals("")) return;
+							self.currentSimulation.toggleBreakRegister(r);
+						}
+					}
+				}
+			}
+		});
+		
 		class MyCellListener implements CellEditorListener {
 			public void editingStopped( ChangeEvent e ) {
 				int column = self.registerTable.getSelectedColumn();
@@ -457,9 +476,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				
 				// Parse
 				try {
-					Integer i = Integer.decode(data);
-					if (!self.currentSimulation.error && !self.currentSimulation.exit && !self.currentSimulation.halt && !self.currentSimulation.running) {
-						self.currentSimulation.ram[addr] = i;
+					if (data.equals("*")) {
+						self.currentSimulation.toggleBreakMemory(addr);
+					} else {
+						Integer i = Integer.decode(data);
+						if (!self.currentSimulation.error && !self.currentSimulation.exit && !self.currentSimulation.halt && !self.currentSimulation.running) {
+							self.currentSimulation.ram[addr] = i;
+						}
 					}
 				} catch (Exception ex) {}
 				self.updateMemory(addr, false);
@@ -547,25 +570,27 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (this.currentSimulation.error) pcstr = "error";
 		if (this.currentSimulation.halt) pcstr = "halt";
 		mt.addRow(new String[]{
-			"pc", pcstr, "", ""
+			"pc" + (currentSimulation.breakRegister.contains("pc") ? "*" : ""), pcstr, "", ""
 		});
 		mt.addRow(new String[] {
-			"Z" + (cz ? " " : ""),
+			"Z" + (currentSimulation.breakRegister.contains("Z") ? "*" : "") + (cz ? " " : ""),
 			this.currentSimulation.cz ? "1" : "0",
-			"N" + (cn ? " " : ""),
+			"N" + (currentSimulation.breakRegister.contains("N") ? "*" : "") + (cn ? " " : ""),
 			this.currentSimulation.cn ? "1" : "0"
 		});
 		mt.addRow(new String[] {
-			"V" + (cv ? " " : ""),
+			"V" + (currentSimulation.breakRegister.contains("V") ? "*" : "") + (cv ? " " : ""),
 			this.currentSimulation.cv ? "1" : "0",
-			"C" + (cc ? " " : ""),
+			"C" + (currentSimulation.breakRegister.contains("C") ? "*" : "") + (cc ? " " : ""),
 			this.currentSimulation.cc ? "1" : "0"
 		});
 		for (int i=0; i<32; i++) {
 			mt.addRow(new String[]{
-				String.format("r%d" + (cr[i] ? " " : ""), i),
+				String.format("r%d" + (currentSimulation.breakRegister.contains(String.format("r%d", i)) ? "*" : "")
+						+ (cr[i] ? " " : ""), i),
 				Integer.toString(this.currentSimulation.r[i]),
-				String.format("f%d" + (cf[i] ? " " : ""), i),
+				String.format("f%d" + (currentSimulation.breakRegister.contains(String.format("f%d", i)) ? "*" : "")
+						+ (cf[i] ? " " : ""), i),
 				Float.toString(this.currentSimulation.f[i])
 			});
 		}
@@ -592,11 +617,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		} else if (addr == -2) {
 			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
 			for (int i=0; i<Simulation.ramsize; i++) {
-				mt.setValueAt(int2hex(this.currentSimulation.ram[i]), i/4, i%4+1);
+				mt.setValueAt(int2hex(this.currentSimulation.ram[i]) + 
+						(this.currentSimulation.breakMemory.contains(i) ? "*" : ""), i/4, i%4+1);
 			}
 		} else {
 			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
-			mt.setValueAt(int2hex(this.currentSimulation.ram[addr]), addr/4, addr%4+1);
+			mt.setValueAt(int2hex(this.currentSimulation.ram[addr]) + 
+					(this.currentSimulation.breakMemory.contains(addr) ? "*" : ""), addr/4, addr%4+1);
 		}
 	}
 	
@@ -661,6 +688,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			break;
 		case BREAKPOINT:
 			this.updateCode();
+			this.updateRegister(false);
 			break;
 		}
 	}

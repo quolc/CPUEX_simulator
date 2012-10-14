@@ -35,6 +35,10 @@ public class Simulation implements Runnable {
 	public boolean fireable; // fireする必要がないときはfalseにしておくと軽く動く
 	public ArrayList<Integer> updatedAddr = new ArrayList<Integer>();
 	public ArrayList<Integer> breakPoints = new ArrayList<Integer>();
+	public ArrayList<String> breakRegister = new ArrayList<String>();
+	public ArrayList<Integer> breakMemory = new ArrayList<Integer>();
+	public String lastModifiedRegister = null;
+	public Integer lastModifiedMemory = null;
 	
 	public synchronized void addEventListener(SimulationEventListener listener) {
 		_listeners.add(listener);
@@ -70,11 +74,57 @@ public class Simulation implements Runnable {
 		}
 		this.fireEvent(SimulationEventType.BREAKPOINT);
 	}
+	public void toggleBreakRegister(String p) {
+		if (this.breakRegister.contains(p)) {
+			this.breakRegister.remove((String)p);
+		} else {
+			this.breakRegister.add(p);
+		}
+		this.fireEvent(SimulationEventType.BREAKPOINT);
+	}
+	public void toggleBreakMemory(int p) {
+		if (this.breakMemory.contains(p)) {
+			this.breakMemory.remove((Integer)p);
+		} else {
+			this.breakMemory.add(p);
+		}
+		this.fireEvent(SimulationEventType.BREAKPOINT);
+	}
 	public void run() {
 		this.fireable = false;
 		this.running = true;
 		while (true) {
+			boolean lz, ln, lv, lc;
+			lz = cz; ln = cn; lv = cv; lc = cc;
+			
+			this.step();
+			
+			// ブレークポイント
 			if (breakPoints.contains(this.pc)) {
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.BREAK);
+				break;
+			}
+			
+			// レジスタブレーク
+			if (this.breakRegister.contains(lastModifiedRegister) ||
+				(this.breakRegister.contains("cn") && (this.cn != ln)) ||
+				(this.breakRegister.contains("cz") && (this.cz != lz)) ||
+				(this.breakRegister.contains("cv") && (this.cv != lv)) ||
+				(this.breakRegister.contains("cc") && (this.cc != lc))) {
+				this.lastModifiedRegister = null;
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.BREAK);
+				break;
+			}
+			
+			// メモリブレーク
+			if (this.breakMemory.contains(lastModifiedMemory)) {
+				this.lastModifiedRegister = null;
 				this.fireable = true;
 				this.fireEvent(SimulationEventType.MEMORY);
 				this.fireEvent(SimulationEventType.STEP);
@@ -103,7 +153,7 @@ public class Simulation implements Runnable {
 				this.fireEvent(SimulationEventType.HALT);
 				break;
 			}
-			this.step();
+			
 		}
 		this.running = false;
 	}
@@ -333,12 +383,18 @@ public class Simulation implements Runnable {
 			return this.f[o.index];
 	}
 	void set_r(Opland o, int v) {
-		if (o.index != 0)
+		if (o.index != 0) {
 			this.r[o.index] = v;
+			if (this.running)
+				this.lastModifiedRegister = String.format("r%d", o.index);
+		}
 	}
 	void set_f(Opland o, float v) {
-		if (o.index != 0)
+		if (o.index != 0) {
 			this.f[o.index] = v;
+			if (this.running)
+				this.lastModifiedRegister = String.format("f%d", o.index);
+		}
 	}
 	
 	// Pattern例: "RRR"
@@ -812,6 +868,8 @@ public class Simulation implements Runnable {
 			
 			this.updatedAddr.add(addr);
 			this.fireEvent(SimulationEventType.MEMORY);
+			if (this.running)
+				this.lastModifiedMemory = addr;
 		}
 		return true;
 	}
@@ -845,9 +903,13 @@ public class Simulation implements Runnable {
 			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
 			return false;
 		}
-
+		
 		this.updatedAddr.add(addr);
 		this.fireEvent(SimulationEventType.MEMORY);
+		
+		if (this.running)
+			this.lastModifiedMemory = addr;
+		
 		return true;
 	}
 	
