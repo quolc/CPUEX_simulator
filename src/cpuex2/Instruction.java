@@ -64,6 +64,15 @@ public class Instruction {
 			}
 			i+=3;
 			
+			// prt, scnだけアセンブラ形式が特殊なので別処理
+			if (instruction.opcode == OpCode.prt || instruction.opcode == OpCode.scn) {
+				int X = Integer.valueOf(m.group().substring(i,i+1), 16);
+				for (int j=0; j<4; j++) {
+					instruction.active_byte[j] = ((X >> (3-j)) & 1) == 1;
+				}
+				i++;
+			}
+			
 			// immediate
 			if (m.group().length() > i && m.group().charAt(i) == 'i') {
 				instruction.immediate = true;
@@ -321,13 +330,13 @@ public class Instruction {
 				for (int i=0; i<5; i++)
 					pattern[31+i] = '0';
 			} else if (this.opcode == OpCode.prt) {
-				pattern[30] = this.fl ? '1' : '0';
+				pattern[31] = this.fl ? '1' : '0';
 				for (int i=0; i<4; i++)
-					pattern[31+i] = this.active_byte[i] ? '1' : '0';
+					pattern[32+i] = this.active_byte[i] ? '1' : '0';
 			} else if (this.opcode == OpCode.scn) {
-				pattern[30] = this.fl ? '1' : '0';
+				pattern[31] = this.fl ? '1' : '0';
 				for (int i=0; i<4; i++)
-					pattern[31+i] = this.active_byte[i] ? '1' : '0';
+					pattern[32+i] = this.active_byte[i] ? '1' : '0';
 			} else {
 				opc = "00000";
 				switch(this.opcode) {

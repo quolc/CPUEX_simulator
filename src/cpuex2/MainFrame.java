@@ -251,7 +251,6 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 						if (o instanceof File) {
 							File file = (File)o;
 							this.frame.loadAssemblyFile(file);
-							file.canExecute();
 						}
 					}
 				} catch (Exception e) {
@@ -514,7 +513,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				Integer.toString(i),
 				"",
 				instruction.raw.replaceFirst("\t", "    "),
-				(instruction.fl ? "?" : "") + instruction.opcode.toString(),
+				(instruction.fl ? "f" : "") + instruction.opcode.toString(),
 				instruction.condition.toString(),
 				instruction.conditionset ? "o" : "",
 				instruction.oplands[0] == null ? "" : instruction.oplands[0].toString(),

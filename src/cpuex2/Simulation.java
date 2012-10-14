@@ -800,11 +800,30 @@ public class Simulation {
 	}
 	
 	boolean proc_prt(Instruction i) {
-		if (!verifyOplandPattern(i, "R")) return false;
+		int v = 0;
+		if (i.fl) {
+			if (!verifyOplandPattern(i, "F")) return false;
+			
+			v = Float.floatToIntBits(fetch_f(i.oplands[0]));
+			
+		} else {
+			if (!verifyOplandPattern(i, "R")) return false;
+			v = fetch_r(i.oplands[0]);
+		}
 		
-		int v = fetch_r(i.oplands[0]);
-		Utility.printf("%d\n", v);
-		this.fireEvent(SimulationEventType.PRINT, v);
+		byte output = 0;
+		
+		if (i.active_byte[0]) output = (byte)((v >> 24) & 255);
+		if (i.active_byte[1]) output = (byte)((v >> 16) & 255);
+		if (i.active_byte[2]) output = (byte)((v >> 8) & 255);
+		if (i.active_byte[3]) output = (byte)((v >> 0) & 255);
+		
+		Utility.printf("%d\n", output);
+		this.fireEvent(SimulationEventType.PRINT, output);
+		
+		return true;
+	}
+	boolean proc_scn(Instruction i) {
 		
 		return true;
 	}
