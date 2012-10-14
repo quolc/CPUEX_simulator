@@ -88,7 +88,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		JMenuItem menuExit = new JMenuItem("Exit");
 		JMenu menuDebug = new JMenu("Debug");
 		JMenuItem menuRun = new JMenuItem("Run");
-		JMenuItem menuPause = new JMenuItem("Pause");
+//		JMenuItem menuPause = new JMenuItem("Pause");
 		JMenuItem menuHalt = new JMenuItem("Halt");
 		JMenuItem menuStep = new JMenuItem("Step");
 		
@@ -98,7 +98,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.META_MASK));
 		menuExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.META_MASK));
 		menuRun.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.META_MASK));
-		menuPause.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.META_MASK));
+//		menuPause.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.META_MASK));
 		menuHalt.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.META_MASK));
 		menuStep.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.META_MASK));
 		
@@ -108,7 +108,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuFile.add(menuExit);
 		this.menuBar.add(menuDebug);
 		menuDebug.add(menuRun);
-		menuDebug.add(menuPause);
+//		menuDebug.add(menuPause);
 		menuDebug.add(menuHalt);
 		menuDebug.addSeparator();
 		menuDebug.add(menuStep);
@@ -116,14 +116,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuOpen.setActionCommand("open");
 		menuExit.setActionCommand("exit");
 		menuRun.setActionCommand("run");
-		menuPause.setActionCommand("pause");
+//		menuPause.setActionCommand("pause");
 		menuHalt.setActionCommand("halt");
 		menuStep.setActionCommand("step");
 		
 		menuOpen.addActionListener(this);
 		menuExit.addActionListener(this);
 		menuRun.addActionListener(this);
-		menuPause.addActionListener(this);
+//		menuPause.addActionListener(this);
 		menuHalt.addActionListener(this);
 		menuStep.addActionListener(this);
 	}
@@ -135,11 +135,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		JButton buttonRun = new JButton();
 		buttonRun.setText("Run");
 		buttonRun.setActionCommand("run");
-		
+		/*
 		JButton buttonPause = new JButton();
 		buttonPause.setText("Pause");
 		buttonPause.setActionCommand("pause");
-		
+		*/
 		JButton buttonHalt = new JButton();
 		buttonHalt.setText("Halt");
 		buttonHalt.setActionCommand("halt");
@@ -150,12 +150,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		this.getContentPane().add(this.toolBar, BorderLayout.NORTH);
 		this.toolBar.add(buttonRun);
-		this.toolBar.add(buttonPause);
+//		this.toolBar.add(buttonPause);
 		this.toolBar.add(buttonHalt);
 		this.toolBar.add(buttonStep);
 		
 		buttonRun.addActionListener(this);
-		buttonPause.addActionListener(this);
+//		buttonPause.addActionListener(this);
 		buttonHalt.addActionListener(this);
 		buttonStep.addActionListener(this);
 	}
@@ -199,6 +199,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			}
 		};
 		
+		final MainFrame frame = this;
 		this.codeTable.addMouseListener(new MouseAdapter() {
 			@Override public void mouseClicked(MouseEvent me) {
 				if(me.getClickCount()==2) {
@@ -206,9 +207,8 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 					int idx = codeTable.rowAtPoint(pt);
 					if(idx>=0) {
 						int row = codeTable.convertRowIndexToModel(idx);
-						String str = String.format("%s (%s)", codeTable.getValueAt(row, 1),
-						tm.getValueAt(row, 2));
-						JOptionPane.showMessageDialog(codeTable, str, "title", JOptionPane.INFORMATION_MESSAGE);
+						if (((String)codeTable.getValueAt(row, 0)).equals("")) return;
+						frame.currentSimulation.toggleBreakPoint(Integer.valueOf((String)codeTable.getValueAt(row, 0)));
 					}
 				}
 			}
@@ -494,7 +494,6 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		DefaultTableModel mt = (DefaultTableModel)this.codeTable.getModel();
 		mt.setRowCount(0);
 		
-		int index=0;
 		for (int i=0; i<this.currentSimulation.program.instructions.length; i++) {
 			Instruction instruction = this.currentSimulation.program.instructions[i];
 			
@@ -505,13 +504,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 						"",
 						label.getKey()
 					});
-					index++;
 				}
 			}
 			
 			mt.addRow(new String[] {
 				Integer.toString(i),
-				"",
+				this.currentSimulation.breakPoints.contains(i) ? "✓" : "",
 				instruction.raw.replaceFirst("\t", "    "),
 				(instruction.fl ? "f" : "") + instruction.opcode.toString(),
 				instruction.condition.toString(),
@@ -520,15 +518,6 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				instruction.oplands[1] == null ? "" : instruction.oplands[1].toString(),
 				instruction.oplands[2] == null ? "" : instruction.oplands[2].toString(),
 			});
-			
-			/*
-			index++;
-			if (i == this.currentSimulation.pc) {
-				this.codeTable.scrollRectToVisible(
-					new Rectangle(
-						0, this.codeTable.getRowHeight()*(index+3), 
-						100, this.codeTable.getRowHeight()));
-			}*/
 		}
 	}
 	public void updateRegister(final boolean coloring) {
@@ -600,6 +589,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 					".... .... .... ...."
 				});
 			}
+		} else if (addr == -2) {
+			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
+			for (int i=0; i<Simulation.ramsize; i++) {
+				mt.setValueAt(int2hex(this.currentSimulation.ram[i]), i/4, i%4+1);
+			}
 		} else {
 			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
 			mt.setValueAt(int2hex(this.currentSimulation.ram[addr]), addr/4, addr%4+1);
@@ -658,10 +652,15 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.outputArea.append(String.format("%d\n", e.param));
 			break;
 		case MEMORY:
-			this.updateMemory((Integer)e.param, true);
+			for (Integer addr : this.currentSimulation.updatedAddr)
+				this.updateMemory(addr, true);
+			this.currentSimulation.updatedAddr.clear();
 			break;
 		case ERROR:
 			this.outputArea.append((String)e.param + "\n");
+			break;
+		case BREAKPOINT:
+			this.updateCode();
 			break;
 		}
 	}
@@ -695,6 +694,8 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (this.currentSimulation.running) return;
 		
 		// TODO start running
+		Thread t = new Thread(this.currentSimulation);
+		t.start();
 	}
 	
 	public void haltSimulation() {

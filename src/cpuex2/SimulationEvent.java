@@ -5,7 +5,7 @@ import java.util.EventObject;
 enum SimulationEventType {
 	INIT, STEP,
 	EXIT, HALT, ERROR,
-	PRINT, MEMORY
+	PRINT, MEMORY, BREAK, BREAKPOINT
 }
 
 public class SimulationEvent extends EventObject {

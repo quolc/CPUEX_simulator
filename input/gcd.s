@@ -29,6 +29,9 @@ _min_caml_start: # main entry point
 	cali	gcd.7
 	ldw	r31, r1, 1
 	ldw	r1, r1, 0
-	prt	r2
+	prt8	r2
+	prt4	r2
+	prt2	r2
+	prt1	r2
    # main program end
 	hlt

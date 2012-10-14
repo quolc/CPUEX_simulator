@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Simulation {
+public class Simulation implements Runnable {
 	public Program program;
 	
 	// constants
@@ -33,6 +33,8 @@ public class Simulation {
 	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
 	public boolean running;
 	public boolean fireable; // fireする必要がないときはfalseにしておくと軽く動く
+	public ArrayList<Integer> updatedAddr = new ArrayList<Integer>();
+	public ArrayList<Integer> breakPoints = new ArrayList<Integer>();
 	
 	public synchronized void addEventListener(SimulationEventListener listener) {
 		_listeners.add(listener);
@@ -42,6 +44,7 @@ public class Simulation {
 	}
 	private synchronized void fireEvent(SimulationEventType type) {
 		if (!fireable) return;
+		
 		SimulationEvent e = new SimulationEvent(this, type, null);
 		for (SimulationEventListener listener : this._listeners) {
 			listener.handleSimulationEvent(e);
@@ -49,6 +52,7 @@ public class Simulation {
 	}
 	private synchronized void fireEvent(SimulationEventType type, Object param) {
 		if (!fireable) return;
+		
 		SimulationEvent e = new SimulationEvent(this, type, param);
 		for (SimulationEventListener listener : this._listeners) {
 			listener.handleSimulationEvent(e);
@@ -57,6 +61,51 @@ public class Simulation {
 	public void stopRunning() {
 		// 非同期実行を中断（その時点で割り込む。状態は保存）
 			
+	}
+	public void toggleBreakPoint(int p) {
+		if (this.breakPoints.contains(p)) {
+			this.breakPoints.remove((Integer)p);
+		} else {
+			this.breakPoints.add(p);
+		}
+		this.fireEvent(SimulationEventType.BREAKPOINT);
+	}
+	public void run() {
+		this.fireable = false;
+		this.running = true;
+		while (true) {
+			if (breakPoints.contains(this.pc)) {
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.BREAK);
+				break;
+			}
+			
+			if (this.error) {
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.ERROR);
+				break;
+			}
+			if (this.exit) {
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.EXIT);
+				break;
+			}
+			if (this.halt) {
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.HALT);
+				break;
+			}
+			this.step();
+		}
+		this.running = false;
 	}
 	
 	// コンストラクタ
@@ -116,6 +165,7 @@ public class Simulation {
 		
 		this.running = false;
 		this.fireable = true;
+		this.updatedAddr.clear();
 		
 		this.fireEvent(SimulationEventType.INIT);
 	}
@@ -760,7 +810,8 @@ public class Simulation {
 				return false;
 			}
 			
-			this.fireEvent(SimulationEventType.MEMORY, addr);
+			this.updatedAddr.add(addr);
+			this.fireEvent(SimulationEventType.MEMORY);
 		}
 		return true;
 	}
@@ -794,8 +845,9 @@ public class Simulation {
 			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
 			return false;
 		}
-		
-		this.fireEvent(SimulationEventType.MEMORY, addr);
+
+		this.updatedAddr.add(addr);
+		this.fireEvent(SimulationEventType.MEMORY);
 		return true;
 	}
 	
