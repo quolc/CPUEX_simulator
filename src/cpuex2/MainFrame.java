@@ -1,14 +1,14 @@
 package cpuex2;
 
 import java.util.*;
+import java.util.List;
 import java.io.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.datatransfer.*;
 import javax.swing.*;
 import javax.swing.table.*;
 import javax.swing.event.*;
-
-import com.sun.tools.internal.ws.processor.model.Model;
 
 public class MainFrame extends JFrame implements ActionListener, SimulationEventListener{	
 	// visual components
@@ -225,6 +225,45 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.codeTable.getColumn("Opland3").setPreferredWidth(100);
 		
 		this.codePane = new JScrollPane(this.codeTable);
+		
+		// D&D関係
+		class FileDropHandler extends TransferHandler {
+			MainFrame frame;
+			
+			public FileDropHandler(MainFrame frame) {
+				this.frame = frame;
+			}
+			
+			@Override
+			public boolean canImport(TransferSupport support) {
+				return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+			}
+			
+			@Override
+			public boolean importData(TransferSupport support) {
+				if (!canImport(support)) {
+					return false;
+				}
+				
+				Transferable transferable = support.getTransferable();
+				try {
+					for (Object o : (List)support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor)) {
+						if (o instanceof File) {
+							File file = (File)o;
+							this.frame.loadAssemblyFile(file);
+							file.canExecute();
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					return false;
+				}
+				return true;
+			}
+		};
+		this.codeTable.setDropMode(DropMode.USE_SELECTION);
+		this.codeTable.setTransferHandler(new FileDropHandler(this));
+		this.codeTable.setFillsViewportHeight(true);
 		
 		this.upperPane.add(this.codePane);
 	}
@@ -483,13 +522,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				instruction.oplands[2] == null ? "" : instruction.oplands[2].toString(),
 			});
 			
+			/*
 			index++;
 			if (i == this.currentSimulation.pc) {
 				this.codeTable.scrollRectToVisible(
 					new Rectangle(
 						0, this.codeTable.getRowHeight()*(index+3), 
 						100, this.codeTable.getRowHeight()));
-			}
+			}*/
 		}
 	}
 	public void updateRegister(final boolean coloring) {
