@@ -59,6 +59,7 @@ public class Simulation {
 			
 	}
 	
+	// コンストラクタ
 	private Simulation() {
 		this.r = new int[32];
 		this.f = new float[32];
@@ -80,6 +81,18 @@ public class Simulation {
 		if (simulation.program == null) return null;
 		
 		return simulation;
+	}
+	
+	public String[] assemble(boolean ruby) {
+		ArrayList<String> code = new ArrayList<String>();
+		for (Instruction instruction : this.program.instructions) {
+			boolean[] pattern = instruction.makeBitPattern(this.program.labels);
+			char[] patternStr = new char[36];
+			for (int i=0; i<36; i++) patternStr[i] = pattern[i] ? '1' : '0';
+			code.add(new String(patternStr) + (ruby ? (" -- " + instruction.raw) : ""));
+		}
+		
+		return code.toArray(new String[]{});
 	}
 	
 	public void initialize() {
@@ -166,8 +179,12 @@ public class Simulation {
 	}
 	
 	public void step() {
-		if (this.pc >= this.program.instructions.length) return;
 		if (this.halt || this.exit || this.error) return;
+		if (this.pc >= this.program.instructions.length) {
+			this.exit = true;
+			this.fireEvent(SimulationEventType.EXIT);
+			return;
+		}
 		
 		Instruction instruction = program.instructions[pc];
 		total++;
@@ -239,16 +256,15 @@ public class Simulation {
 			}
 		}
 		
-		if (!jumped) pc++;
-		
 		// 同期実行時はステップごとにイベント発行
 		if (!this.running) {
 			this.fireEvent(SimulationEventType.STEP);
 		}
 		
-		// 終了判定
-		if (pc == program.instructions.length) {
-			exit = true;
+		// PC処理
+		if (!jumped && !this.error) pc++;
+		if (pc >= program.instructions.length && !halt) {
+			this.exit = true;
 			this.fireEvent(SimulationEventType.EXIT);
 		}
 	}
@@ -629,7 +645,7 @@ public class Simulation {
 			int a;
 			if (!verifyOplandPattern(i, "FR")) return false;
 			a = fetch_r(i.oplands[1]);
-			set_f(i.oplands[0], (float)a);
+			set_f(i.oplands[0], Float.intBitsToFloat(a));
 		}
 		return true;
 	}
@@ -640,7 +656,7 @@ public class Simulation {
 			float a;
 			if (!verifyOplandPattern(i, "RF")) return false;
 			a = fetch_f(i.oplands[1]);
-			set_r(i.oplands[0], (int)a);
+			set_r(i.oplands[0], Float.floatToIntBits(a));
 		}
 		return true;
 	}
@@ -660,8 +676,8 @@ public class Simulation {
 				}
 				this.pc = newpc;
 			} else {
-				if (!verifyOplandPattern(i, "R")) return false;
-				int newpc = fetch_r(i.oplands[0]);
+				if (!verifyOplandPattern(i, "NR")) return false;
+				int newpc = fetch_r(i.oplands[1]);
 //				Utility.printf("\nJump to the address %d\n", newpc);
 				this.pc = newpc;
 			}
@@ -690,8 +706,8 @@ public class Simulation {
 				
 				this.pc = newpc;
 			} else {
-				if (!verifyOplandPattern(i, "R")) return false;
-				int newpc = fetch_r(i.oplands[0]);
+				if (!verifyOplandPattern(i, "NR")) return false;
+				int newpc = fetch_r(i.oplands[1]);
 //				Utility.printf("\nJump to the address %d\n", newpc);
 				
 				// リンクレジスタの更新
@@ -715,8 +731,14 @@ public class Simulation {
 			int offset = i.oplands[2].immediate;
 			addr += offset;
 			
-			int value = ram[addr];
-			set_r(i.oplands[0], value);
+			try {
+				int value = ram[addr];
+				set_r(i.oplands[0], value);
+			} catch (Exception e) {
+				Utility.errPrintf("Memory Index Out of Bound. at %d\n", i.raw);
+				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
+				return false;
+			}
 		}
 		return true;
 	}
@@ -729,8 +751,14 @@ public class Simulation {
 			int offset = i.oplands[2].immediate;
 			addr += offset;
 			
-			int value = fetch_r(i.oplands[0]);
-			ram[addr] = value;
+			try {
+				int value = fetch_r(i.oplands[0]);
+				ram[addr] = value;
+			} catch (Exception e) {
+				Utility.errPrintf("Memory Index Out of Bound. at %d\n", i.raw);
+				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
+				return false;
+			}
 			
 			this.fireEvent(SimulationEventType.MEMORY, addr);
 		}
@@ -743,9 +771,13 @@ public class Simulation {
 		int offset = i.oplands[2].immediate;
 		addr += offset;
 		
-		float value = Float.intBitsToFloat(ram[addr]);
-		
-		set_f(i.oplands[0], value);
+		try {
+			float value = Float.intBitsToFloat(ram[addr]);
+			set_f(i.oplands[0], value);
+		} catch (Exception e) {
+			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
+			return false;	
+		}
 		
 		return true;
 	}
@@ -755,9 +787,13 @@ public class Simulation {
 		int offset = i.oplands[2].immediate;
 		addr += offset;
 		
-		float src = fetch_f(i.oplands[0]);
-		
-		ram[addr] = Float.floatToIntBits(src);
+		try {
+			float src = fetch_f(i.oplands[0]);
+			ram[addr] = Float.floatToIntBits(src);
+		} catch (Exception e)  {
+			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
+			return false;
+		}
 		
 		this.fireEvent(SimulationEventType.MEMORY, addr);
 		return true;
@@ -776,6 +812,7 @@ public class Simulation {
 	boolean proc_hlt(Instruction i) {
 		Utility.println("Program is halted by hlt instruction");
 		this.halt = true;
+		this.fireEvent(SimulationEventType.HALT);
 		return true;
 	}
 }

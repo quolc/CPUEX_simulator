@@ -3,7 +3,8 @@ package cpuex2;
 import java.util.EventObject;
 
 enum SimulationEventType {
-	INIT, STEP, EXIT,
+	INIT, STEP,
+	EXIT, HALT, ERROR,
 	PRINT, MEMORY
 }
 

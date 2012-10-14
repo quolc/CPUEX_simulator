@@ -6,6 +6,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.table.*;
+import javax.swing.event.*;
 
 import com.sun.tools.internal.ws.processor.model.Model;
 
@@ -253,13 +254,21 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			});
 		}
 		
+		final MainFrame self = this;
 		final DefaultTableModel tm = new DefaultTableModel(rowData.toArray(new String[][]{}), colNames) {
 			@Override
 			public boolean isCellEditable(int row, int column) {
+				if (column == 1 || column == 3) {
+					if (self.currentSimulation != null) {
+						if (!self.currentSimulation.running) {
+							return true;
+						}
+					}
+				}
 				return false;
 			}
 		};
-		
+				
 		this.registerTable = new JTable(tm) {
 			@Override public Component prepareRenderer(
 				TableCellRenderer renderer, int row, int column) {
@@ -282,6 +291,81 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.registerTable.getColumn("Val1").setPreferredWidth(70);
 		this.registerTable.getColumn("Val2").setPreferredWidth(70);
 		
+		class MyCellListener implements CellEditorListener {
+			public void editingStopped( ChangeEvent e ) {
+				int column = self.registerTable.getSelectedColumn();
+				int row = self.registerTable.getSelectedRow();
+				if (row < 0 || column < 0) return;
+				
+				String data = (String)self.registerTable.getValueAt(row, column);
+				if (!self.currentSimulation.error && !self.currentSimulation.exit && !self.currentSimulation.halt && !self.currentSimulation.running) {
+					switch (column) {
+					case 1:
+						if (row == 0) {
+							try {
+								Integer p = Integer.parseInt(data);
+								self.currentSimulation.pc = p;
+							} catch(Exception ex){}
+							self.updateCode();
+						} else if (row == 1) {
+							try {
+								Integer c = Integer.parseInt(data);
+								if (c == 0 || c == 1) {
+									self.currentSimulation.cz = (c == 1);
+								}
+							} catch (Exception ex) { }
+						} else if (row == 2) {
+							try {
+								Integer c = Integer.parseInt(data);
+								if (c == 0 || c == 1) {
+									self.currentSimulation.cv = (c == 1);
+								}
+							} catch (Exception ex) { }
+						} else if (row > 3) { // rレジスタ書き換え
+							try {
+								Integer r = Integer.parseInt(data);
+								self.currentSimulation.r[row-3] = r;
+							} catch(Exception ex) {}
+						}
+						break;
+					case 3:
+						if (row == 1) {
+							try {
+								Integer c = Integer.parseInt(data);
+								if (c == 0 || c == 1) {
+									self.currentSimulation.cn = (c == 1);
+								}
+							} catch (Exception ex) { }
+						} else if (row == 2) {
+							try {
+								Integer c = Integer.parseInt(data);
+								if (c == 0 || c == 1) {
+									self.currentSimulation.cc = (c == 1);
+								}
+							} catch (Exception ex) { }
+						} else if (row > 3) { // fレジスタ書き換え
+							try {
+								Float f = Float.parseFloat(data);
+								self.currentSimulation.f[row-3] = f;
+							} catch(Exception ex) {}
+						}
+						break;
+					}
+				}
+				self.updateRegister(false);
+			}
+			public void editingCanceled( ChangeEvent e ){
+			}
+		}
+		class MyCellEditor extends DefaultCellEditor {
+			MyCellEditor(JTextField tf) {
+				super(tf);
+				this.addCellEditorListener(new MyCellListener());
+			}
+		};
+		this.registerTable.getColumnModel().getColumn(1).setCellEditor(new MyCellEditor(new JTextField()));
+		this.registerTable.getColumnModel().getColumn(3).setCellEditor(new MyCellEditor(new JTextField()));
+		
 		this.registerPane = new JScrollPane(this.registerTable);
 		this.registerPane.setSize(new Dimension(200, 600));
 		
@@ -300,24 +384,61 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		for (int i=0; i<this.currentSimulation.ramsize; i+=4) { // 1行に4word表示, 全部で1024*1024word
 			rowData.add(new String[] {
 				String.format("0x%06x", i),
-				"00000000 (0)",
-				"00000000 (0)",
-				"00000000 (0)",
-				"00000000 (0)",
+				"0x00000000 (0)",
+				"0x00000000 (0)",
+				"0x00000000 (0)",
+				"0x00000000 (0)",
 				".... .... .... ...."
 			});
 		}
-		
+		final MainFrame self = this;
 		final DefaultTableModel tm = new DefaultTableModel(rowData.toArray(new String[][]{}), colNames) {
 			@Override
 			public boolean isCellEditable(int row, int column) {
+				if (column >= 1) {
+					if (self.currentSimulation != null && self.currentSimulation.running == false) {
+						return true;
+					}
+				}
 				return false;
 			}
 		};
 		
 		this.memoryTable = new JTable(tm) {
-			
+			// TODO 編集強調
 		};
+		
+		class MyCellListener implements CellEditorListener {
+			public void editingStopped( ChangeEvent e ){
+				int column = self.memoryTable.getSelectedColumn();
+				int row = self.memoryTable.getSelectedRow();
+				if (row < 0 || column < 0) return;
+				
+				int addr = row*4 + column - 1;
+				String data = (String)self.memoryTable.getValueAt(row, column);
+				
+				// Parse
+				try {
+					Integer i = Integer.decode(data);
+					if (!self.currentSimulation.error && !self.currentSimulation.exit && !self.currentSimulation.halt && !self.currentSimulation.running) {
+						self.currentSimulation.ram[addr] = i;
+					}
+				} catch (Exception ex) {}
+				self.updateMemory(addr, false);
+			}
+			public void editingCanceled( ChangeEvent e ){
+			}
+		}
+		class MyCellEditor extends DefaultCellEditor {
+			MyCellEditor(JTextField tf) {
+				super(tf);
+				this.addCellEditorListener(new MyCellListener());
+			}
+		};
+		this.memoryTable.getColumnModel().getColumn(1).setCellEditor(new MyCellEditor(new JTextField()));
+		this.memoryTable.getColumnModel().getColumn(2).setCellEditor(new MyCellEditor(new JTextField()));
+		this.memoryTable.getColumnModel().getColumn(3).setCellEditor(new MyCellEditor(new JTextField()));
+		this.memoryTable.getColumnModel().getColumn(4).setCellEditor(new MyCellEditor(new JTextField()));
 		
 		this.memoryPane = new JScrollPane(this.memoryTable);
 		this.memoryPane.setSize(new Dimension(800, 200));
@@ -394,8 +515,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		mt.setRowCount(0);
 		
 		String pcstr = Integer.toString(this.currentSimulation.pc);
-		if (this.currentSimulation.halt) pcstr = "halt";
 		if (this.currentSimulation.exit) pcstr = "exit";
+		if (this.currentSimulation.error) pcstr = "error";
+		if (this.currentSimulation.halt) pcstr = "halt";
 		mt.addRow(new String[]{
 			"pc", pcstr, "", ""
 		});
@@ -441,7 +563,6 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			}
 		} else {
 			DefaultTableModel mt = (DefaultTableModel)this.memoryTable.getModel();
-			
 			mt.setValueAt(int2hex(this.currentSimulation.ram[addr]), addr/4, addr%4+1);
 		}
 	}
@@ -484,15 +605,24 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		case STEP:
 			this.updateCode();
 			this.updateRegister(true);
+			this.statusBar.setText("Step.");
 			break;
 		case EXIT:
+			this.updateRegister(false);
 			this.statusBar.setText("Exit.");
+			break;
+		case HALT:
+			this.updateRegister(false);
+			this.statusBar.setText("Halted.");
 			break;
 		case PRINT:
 			this.outputArea.append(String.format("%d\n", e.param));
 			break;
 		case MEMORY:
 			this.updateMemory((Integer)e.param, true);
+			break;
+		case ERROR:
+			this.outputArea.append((String)e.param + "\n");
 			break;
 		}
 	}
@@ -533,13 +663,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (this.currentSimulation.running) this.currentSimulation.stopRunning();
 		
 		this.currentSimulation.initialize();
-		this.statusBar.setText("Halted.");
 	}
 	public void stepSimulation() {
 		if (this.currentSimulation == null) return;
 		if (this.currentSimulation.running) return;
 		
 		this.currentSimulation.step();
-		this.statusBar.setText("Step.");
 	}
 }

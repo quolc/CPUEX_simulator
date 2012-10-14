@@ -12,7 +12,7 @@ composed.10:
 	ldw	r1, r1, 0
 	ldw	r30, r1, -1
 	ldw	r29, r30, 0
-	cal	r29
+	jmp	r29
 compose.7:
 	addi	r6, r4, 0
 	addi	r4, r4, 16
