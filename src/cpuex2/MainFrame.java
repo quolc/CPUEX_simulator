@@ -27,6 +27,10 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	public Simulation currentSimulation;
 	public static MainFrame instance = null;
 	
+	// variables
+	public static int outputmode = 0;
+	static ArrayList<Byte> buffer = new ArrayList<Byte>();
+	
 	// Initialize
 	public static MainFrame getInstance() {
 		if (instance == null) {
@@ -53,7 +57,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.upperPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 		this.upperPane.setResizeWeight(1.0);
 		this.lowerPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-		this.upperPane.setResizeWeight(1.0);
+		this.lowerPane.setResizeWeight(0.0);
+		this.ioPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		this.ioPane.setResizeWeight(0.5);
 		this.mainPane.add(this.upperPane);
 		this.mainPane.add(this.lowerPane);
 		this.getContentPane().add(this.mainPane, BorderLayout.CENTER);
@@ -67,7 +73,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.initializeCodeView();
 		this.initializeRegisterView();
 		this.initializeMemoryView();
-		this.initializeOutputView();
+		this.initializeIOView();
 		
 		// レイアウトの細かい調整
 		this.pack();
@@ -75,7 +81,8 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.setVisible(true);
 		this.mainPane.setDividerLocation(0.8);
 		this.upperPane.setDividerLocation(0.8);
-		this.lowerPane.setDividerLocation(0.7);
+		this.lowerPane.setDividerLocation(0.6);
+		this.ioPane.setDividerLocation(0.3);
 		this.registerPane.getColumnHeader().setVisible(false);
 		
 		// Initialize Logical Components
@@ -506,11 +513,75 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		this.lowerPane.add(this.memoryPane);
 	}
-	public void initializeOutputView() {
+	public void initializeIOView() {
+		JPanel panel = new JPanel();
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		
+		JPanel titlePanel = new JPanel();
+		titlePanel.setMaximumSize(new Dimension(200, 30));
+		JLabel titleLabel = new JLabel("I/O Options");
+		titlePanel.add(titleLabel);
+		panel.add(titlePanel);
+		
+		JPanel formatPanel = new JPanel();
+		formatPanel.setMaximumSize(new Dimension(200, 50));
+		formatPanel.setLayout(new BoxLayout(formatPanel, BoxLayout.X_AXIS));
+		JLabel formatTitleLabel = new JLabel("Output");
+		formatPanel.add(formatTitleLabel);
+		
+		JPanel formatRadioPanel = new JPanel();
+		formatRadioPanel.setLayout(new BoxLayout(formatRadioPanel, BoxLayout.Y_AXIS));
+		
+		JRadioButton intRadio = new JRadioButton("Integer");
+		intRadio.setActionCommand("out_int");
+		intRadio.addActionListener(this);
+		JRadioButton hexRadio = new JRadioButton("Hex");
+		hexRadio.setActionCommand("out_hex");
+		hexRadio.addActionListener(this);
+		hexRadio.setSelected(true);
+		
+		ButtonGroup outGroup = new ButtonGroup();
+		outGroup.add(intRadio);
+		outGroup.add(hexRadio);
+		
+		formatRadioPanel.add(intRadio);
+		formatRadioPanel.add(hexRadio);
+		formatPanel.add(formatRadioPanel);
+		
+		panel.add(formatPanel);
+		
+		JPanel inputFilePanel = new JPanel();
+		inputFilePanel.setMaximumSize(new Dimension(200, 50));
+		inputFilePanel.setLayout(new BoxLayout(inputFilePanel, BoxLayout.X_AXIS));
+		JLabel inputTitleLabel = new JLabel("Input");
+		inputFilePanel.add(inputTitleLabel);
+		
+		JTextField fileField = new JTextField();
+		fileField.setEditable(false);
+		fileField.setMaximumSize(new Dimension(1000, 30));
+		inputFilePanel.add(fileField);
+		
+		JButton fileButton = new JButton("File...");
+		fileButton.setMaximumSize(new Dimension(40, 30));
+		inputFilePanel.add(fileButton);
+		
+		panel.add(inputFilePanel);
+		
+		JPanel clearPanel = new JPanel();
+		JButton clearButton = new JButton("Clear Output");
+		clearButton.setActionCommand("out_clear");
+		clearButton.addActionListener(this);
+		clearPanel.add(clearButton);
+		panel.add(clearPanel);
+		
 		this.outputArea = new JTextArea();
 		this.outputPane = new JScrollPane(this.outputArea);
-
-		this.lowerPane.add(this.outputPane);
+		this.outputPane.setMinimumSize(new Dimension(200, 100));
+		
+		this.ioPane.add(panel);
+		this.ioPane.add(this.outputPane);
+		
+		this.lowerPane.add(this.ioPane);
 	}
 	
 	// Visual Update
@@ -660,6 +731,18 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (e.getActionCommand().equals("step")) {
 			this.stepSimulation();
 		}
+		
+		if (e.getActionCommand().equals("out_int")) {
+			this.outputmode = 1;
+		}
+		
+		if (e.getActionCommand().equals("out_hex")) {
+			this.outputmode = 0;
+		}
+		
+		if (e.getActionCommand().equals("out_clear")) {
+			this.outputArea.setText("");
+		}
 	}
 	public void handleSimulationEvent(SimulationEvent e) {
 		switch (e.type) {
@@ -682,7 +765,24 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.statusBar.setText("Halted.");
 			break;
 		case PRINT:
-			this.outputArea.append(String.format("%x\n", e.param));
+			byte b = (Byte)e.param;
+			switch (outputmode) {
+			case 0:
+				this.outputArea.append(String.format("%02x", b));
+				break;
+			case 1:
+				buffer.add(b);
+				while (buffer.size() >= 4) {
+					int val=0;
+					for (int i=0; i<4; i++) {
+						val = val << 8;
+						val = val + (buffer.get(0) & 0xFF);
+						buffer.remove(0);
+					}
+					this.outputArea.append(String.format("%d\n", val));
+				}
+				break;
+			}
 			break;
 		case MEMORY:
 			for (Integer addr : this.currentSimulation.updatedAddr)

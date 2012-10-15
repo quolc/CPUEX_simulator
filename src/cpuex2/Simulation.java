@@ -30,6 +30,8 @@ public class Simulation implements Runnable {
 	public int total;
 	Map<OpCode, Method> proc_dic;
 	
+	public Map<String, Integer> call_count = new HashMap<String, Integer>();
+	
 	// GUIシミュレーション用
 	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
 	public boolean running;
@@ -239,6 +241,10 @@ public class Simulation implements Runnable {
 		this.updatedAddr.clear();
 		
 		this.fireEvent(SimulationEventType.INIT);
+		
+		for (String label : this.program.labels.keySet()) {
+			this.call_count.put(label, 0);
+		}
 	}
 	
 	public boolean willExecuteNextStep() {
@@ -837,7 +843,10 @@ public class Simulation implements Runnable {
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
-				Utility.errPrintf("[Call] %d -> %s\n", this.pc, label);
+				
+				int c = this.call_count.get(label);
+				this.call_count.put(label, c+1);
+				
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					Utility.errPrintf("Invalid label %s\n", label);
@@ -854,7 +863,6 @@ public class Simulation implements Runnable {
 			} else {
 				if (!verifyOplandPattern(i, "NR")) return false;
 				int newpc = fetch_r(i.oplands[1]);
-				Utility.errPrintf("[Call] %d -> %d\n", this.pc, newpc);
 				
 				// リンクレジスタの更新
 				Opland opl = new Opland();

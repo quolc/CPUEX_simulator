@@ -1,6 +1,9 @@
 package cpuex2;
 
 import java.io.*;
+import java.util.*;
+import java.util.Map;
+
 import gnu.getopt.*;
 
 public class Main {
@@ -70,6 +73,12 @@ public class Main {
 					simu.step();
 				}
 				long end = java.lang.System.currentTimeMillis();
+				
+				// call統計の出力
+				for (Map.Entry<String, Integer> entry : simu.call_count.entrySet()) {
+					Utility.errPrintf("%s: %d\n", entry.getKey(), entry.getValue());
+				}
+				
 				Utility.errPrintf("%d ms (%d instructions/sec)\n", end - start, simu.total / (end-start) * 1000);
 				Utility.errPrintf("(total %d instructions executed)\n", simu.total);
 			}
