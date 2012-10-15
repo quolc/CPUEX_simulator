@@ -11,7 +11,7 @@ enum OpCode {
 	jmp, cal,
 	ldw, stw, ldf, stf,
 	hlt, prt, scn,
-	nop,
+	nop, neg
 }
 enum Condition {
 	AL, NV, EQ, NE, MI, PL, VS, VC,
@@ -39,7 +39,7 @@ public class Instruction {
 	public static Instruction parseLine(String line) {
 		Instruction instruction = new Instruction();
 		
-		Utility.println(line);
+		Utility.errPrintf(line + "\n");
 		
 		Pattern p = Pattern.compile("[^,\\s]+");
 		Matcher m = p.matcher(line);
@@ -59,18 +59,23 @@ public class Instruction {
 			try {
 				instruction.opcode = OpCode.valueOf(m.group().substring(i, i+3));
 			} catch (Exception e) {
-				System.err.printf("Invalid Opcode Format : %s\n", line);
+				Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 				return null;
 			}
 			i+=3;
 			
 			// prt, scnだけアセンブラ形式が特殊なので別処理
 			if (instruction.opcode == OpCode.prt || instruction.opcode == OpCode.scn) {
-				int X = Integer.valueOf(m.group().substring(i,i+1), 16);
-				for (int j=0; j<4; j++) {
-					instruction.active_byte[j] = ((X >> (3-j)) & 1) == 1;
+				try {
+					int X = Integer.valueOf(m.group().substring(i,i+1), 16);
+					for (int j=0; j<4; j++) {
+						instruction.active_byte[j] = ((X >> (3-j)) & 1) == 1;
+					}
+					i++;
+				} catch (Exception e) {
+					Utility.errPrintf("Invalid Opcode Format : %s\n", line);
+					return null;
 				}
-				i++;
 			}
 			
 			// immediate
@@ -92,7 +97,7 @@ public class Instruction {
 				try {
 					instruction.condition = Condition.valueOf(m.group().substring(i, i+2).toUpperCase());
 				} catch (Exception e) {
-					System.err.printf("Invalid Opcode Format : %s\n", line);
+					Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 					return null;
 				}
 				i+=2;
@@ -108,7 +113,7 @@ public class Instruction {
 				instruction.conditionset = false;
 			}
 			if (m.group().length() != i) {
-				System.err.printf("Invalid Opcode Format : %s\n", line);
+				Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 			}
 		}
 		

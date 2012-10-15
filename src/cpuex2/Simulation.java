@@ -26,12 +26,15 @@ public class Simulation implements Runnable {
 	public boolean halt;
 	public boolean exit;
 	public boolean error;
+	public String error_desc=null;
 	public int total;
 	Map<OpCode, Method> proc_dic;
 	
 	// GUIシミュレーション用
 	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
 	public boolean running;
+	public boolean interrupt_h = false;
+	public boolean interrupt_p = false;
 	public boolean fireable; // fireする必要がないときはfalseにしておくと軽く動く
 	public ArrayList<Integer> updatedAddr = new ArrayList<Integer>();
 	public ArrayList<Integer> breakPoints = new ArrayList<Integer>();
@@ -47,7 +50,7 @@ public class Simulation implements Runnable {
 		_listeners.remove(listener);
 	}
 	private synchronized void fireEvent(SimulationEventType type) {
-		if (!fireable) return;
+		if (!fireable && type != SimulationEventType.PRINT) return;
 		
 		SimulationEvent e = new SimulationEvent(this, type, null);
 		for (SimulationEventListener listener : this._listeners) {
@@ -55,7 +58,7 @@ public class Simulation implements Runnable {
 		}
 	}
 	private synchronized void fireEvent(SimulationEventType type, Object param) {
-		if (!fireable) return;
+		if (!fireable && type != SimulationEventType.PRINT) return;
 		
 		SimulationEvent e = new SimulationEvent(this, type, param);
 		for (SimulationEventListener listener : this._listeners) {
@@ -63,8 +66,10 @@ public class Simulation implements Runnable {
 		}
 	}
 	public void stopRunning() {
-		// 非同期実行を中断（その時点で割り込む。状態は保存）
-			
+		this.interrupt_h = true;
+	}
+	public void pauseRunning() {
+		this.interrupt_p = true;
 	}
 	public void toggleBreakPoint(int p) {
 		if (this.breakPoints.contains(p)) {
@@ -94,6 +99,22 @@ public class Simulation implements Runnable {
 		this.fireable = false;
 		this.running = true;
 		while (true) {
+			// 割込みチェック
+			if (this.interrupt_h) {
+				this.interrupt_h = false;
+				this.fireable = true;
+				this.initialize();
+				break;
+			}
+			if (this.interrupt_p) {
+				this.interrupt_p = false;
+				this.fireable = true;
+				this.fireEvent(SimulationEventType.MEMORY);
+				this.fireEvent(SimulationEventType.STEP);
+				this.fireEvent(SimulationEventType.BREAK);
+				break;
+			}
+			
 			boolean lz, ln, lv, lc;
 			lz = cz; ln = cn; lv = cv; lc = cc;
 			
@@ -136,7 +157,7 @@ public class Simulation implements Runnable {
 				this.fireable = true;
 				this.fireEvent(SimulationEventType.MEMORY);
 				this.fireEvent(SimulationEventType.STEP);
-				this.fireEvent(SimulationEventType.ERROR);
+				this.fireEvent(SimulationEventType.ERROR, this.error_desc);
 				break;
 			}
 			if (this.exit) {
@@ -349,6 +370,7 @@ public class Simulation implements Runnable {
 				if (!ret) {
 					Utility.errPrintf("An error happened while executing %s.\n", instruction.raw);
 					this.error = true;
+					this.error_desc = String.format("An error happened while executing %s.\n", instruction.raw);
 				}
 				if (instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) jumped = true;
 			} catch (Exception e) {
@@ -549,6 +571,24 @@ public class Simulation implements Runnable {
 			}
 		} else {
 			return false; // 整数divは実装しない
+		}
+		return true;
+	}
+	boolean proc_neg(Instruction i) {
+		if (i.fl) {
+			float a, c;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			c = -a;
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
+				cc = false;
+			}
+		} else {
+			return false;
 		}
 		return true;
 	}
@@ -797,7 +837,7 @@ public class Simulation implements Runnable {
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
-//				Utility.printf("\nJump to the label %s\n", label);
+				Utility.errPrintf("[Call] %d -> %s\n", this.pc, label);
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					Utility.errPrintf("Invalid label %s\n", label);
@@ -814,7 +854,7 @@ public class Simulation implements Runnable {
 			} else {
 				if (!verifyOplandPattern(i, "NR")) return false;
 				int newpc = fetch_r(i.oplands[1]);
-//				Utility.printf("\nJump to the address %d\n", newpc);
+				Utility.errPrintf("[Call] %d -> %d\n", this.pc, newpc);
 				
 				// リンクレジスタの更新
 				Opland opl = new Opland();
@@ -866,7 +906,8 @@ public class Simulation implements Runnable {
 				return false;
 			}
 			
-			this.updatedAddr.add(addr);
+			if (!this.updatedAddr.contains(addr))
+				this.updatedAddr.add(addr);
 			this.fireEvent(SimulationEventType.MEMORY);
 			if (this.running)
 				this.lastModifiedMemory = addr;
@@ -904,7 +945,8 @@ public class Simulation implements Runnable {
 			return false;
 		}
 		
-		this.updatedAddr.add(addr);
+		if (!this.updatedAddr.contains(addr))
+			this.updatedAddr.add(addr);
 		this.fireEvent(SimulationEventType.MEMORY);
 		
 		if (this.running)
@@ -932,7 +974,7 @@ public class Simulation implements Runnable {
 		if (i.active_byte[2]) output = (byte)((v >> 8) & 255);
 		if (i.active_byte[3]) output = (byte)((v >> 0) & 255);
 		
-		Utility.printf("%d\n", output);
+		Utility.output(output);
 		this.fireEvent(SimulationEventType.PRINT, output);
 		
 		return true;
@@ -943,7 +985,7 @@ public class Simulation implements Runnable {
 	}
 	
 	boolean proc_hlt(Instruction i) {
-		Utility.println("Program is halted by hlt instruction");
+		Utility.errPrintf("Program is halted by hlt instruction\n");
 		this.halt = true;
 		this.fireEvent(SimulationEventType.HALT);
 		return true;

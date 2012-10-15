@@ -47,7 +47,7 @@ public class Program {
 					instructions.add(instruction);
 				} else { // label
 					line = line.trim();
-					Utility.println(line);
+					Utility.errPrintf(line+"\n");
 					if (line.indexOf(':') != line.length() - 1) {
 						Utility.errPrintf("Invalid Label Formatting on Line %d\n", l);
 						return null;

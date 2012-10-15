@@ -18,7 +18,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	JTable codeTable, registerTable, memoryTable;
 	JTextArea outputArea;
 	JScrollPane codePane, registerPane, outputPane, memoryPane;
-	JSplitPane mainPane, upperPane, lowerPane;
+	JSplitPane mainPane, upperPane, lowerPane, ioPane;
 	
 	Map<Integer, Integer> pc2rowMap;
 	Map<Integer, Integer> row2pcMap;
@@ -88,7 +88,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		JMenuItem menuExit = new JMenuItem("Exit");
 		JMenu menuDebug = new JMenu("Debug");
 		JMenuItem menuRun = new JMenuItem("Run");
-//		JMenuItem menuPause = new JMenuItem("Pause");
+		JMenuItem menuPause = new JMenuItem("Pause");
 		JMenuItem menuHalt = new JMenuItem("Halt");
 		JMenuItem menuStep = new JMenuItem("Step");
 		
@@ -98,7 +98,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.META_MASK));
 		menuExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.META_MASK));
 		menuRun.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.META_MASK));
-//		menuPause.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.META_MASK));
+		menuPause.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.META_MASK));
 		menuHalt.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.META_MASK));
 		menuStep.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.META_MASK));
 		
@@ -108,7 +108,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuFile.add(menuExit);
 		this.menuBar.add(menuDebug);
 		menuDebug.add(menuRun);
-//		menuDebug.add(menuPause);
+		menuDebug.add(menuPause);
 		menuDebug.add(menuHalt);
 		menuDebug.addSeparator();
 		menuDebug.add(menuStep);
@@ -116,14 +116,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		menuOpen.setActionCommand("open");
 		menuExit.setActionCommand("exit");
 		menuRun.setActionCommand("run");
-//		menuPause.setActionCommand("pause");
+		menuPause.setActionCommand("pause");
 		menuHalt.setActionCommand("halt");
 		menuStep.setActionCommand("step");
 		
 		menuOpen.addActionListener(this);
 		menuExit.addActionListener(this);
 		menuRun.addActionListener(this);
-//		menuPause.addActionListener(this);
+		menuPause.addActionListener(this);
 		menuHalt.addActionListener(this);
 		menuStep.addActionListener(this);
 	}
@@ -135,11 +135,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		JButton buttonRun = new JButton();
 		buttonRun.setText("Run");
 		buttonRun.setActionCommand("run");
-		/*
+		
 		JButton buttonPause = new JButton();
 		buttonPause.setText("Pause");
 		buttonPause.setActionCommand("pause");
-		*/
+		
 		JButton buttonHalt = new JButton();
 		buttonHalt.setText("Halt");
 		buttonHalt.setActionCommand("halt");
@@ -150,12 +150,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		this.getContentPane().add(this.toolBar, BorderLayout.NORTH);
 		this.toolBar.add(buttonRun);
-//		this.toolBar.add(buttonPause);
+		this.toolBar.add(buttonPause);
 		this.toolBar.add(buttonHalt);
 		this.toolBar.add(buttonStep);
 		
 		buttonRun.addActionListener(this);
-//		buttonPause.addActionListener(this);
+		buttonPause.addActionListener(this);
 		buttonHalt.addActionListener(this);
 		buttonStep.addActionListener(this);
 	}
@@ -509,6 +509,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	public void initializeOutputView() {
 		this.outputArea = new JTextArea();
 		this.outputPane = new JScrollPane(this.outputArea);
+
 		this.lowerPane.add(this.outputPane);
 	}
 	
@@ -647,8 +648,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (e.getActionCommand().equals("run")) {
 			this.runSimulation();
 		}
+		
 		if (e.getActionCommand().equals("halt")) {
 			this.haltSimulation();
+		}
+		
+		if (e.getActionCommand().equals("pause")) {
+			this.pauseSimulation();
 		}
 		
 		if (e.getActionCommand().equals("step")) {
@@ -676,7 +682,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.statusBar.setText("Halted.");
 			break;
 		case PRINT:
-			this.outputArea.append(String.format("%d\n", e.param));
+			this.outputArea.append(String.format("%x\n", e.param));
 			break;
 		case MEMORY:
 			for (Integer addr : this.currentSimulation.updatedAddr)
@@ -717,21 +723,32 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	}
 	
 	// Simulation Control
+	Thread t = null;
 	public void runSimulation () {
 		if (this.currentSimulation == null) return;
 		if (this.currentSimulation.running) return;
 		
 		// TODO start running
-		Thread t = new Thread(this.currentSimulation);
+		t = new Thread(this.currentSimulation);
 		t.start();
 	}
 	
 	public void haltSimulation() {
 		if (this.currentSimulation == null) return;
-		if (this.currentSimulation.running) this.currentSimulation.stopRunning();
-		
-		this.currentSimulation.initialize();
+		if (this.currentSimulation.running) {
+			this.currentSimulation.stopRunning();
+		} else {
+			this.currentSimulation.initialize();
+		}
 	}
+	
+	public void pauseSimulation() {
+		if (this.currentSimulation == null) return;
+		if (this.currentSimulation.running) {
+			this.currentSimulation.pauseRunning();
+		}
+	}
+	
 	public void stepSimulation() {
 		if (this.currentSimulation == null) return;
 		if (this.currentSimulation.running) return;
