@@ -17,6 +17,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	JLabel statusBar;
 	JTable codeTable, registerTable, memoryTable;
 	JTextArea outputArea;
+	JTextField inputFilenameField;
 	JScrollPane codePane, registerPane, outputPane, memoryPane;
 	JSplitPane mainPane, upperPane, lowerPane, ioPane;
 	
@@ -556,12 +557,14 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		JLabel inputTitleLabel = new JLabel("Input");
 		inputFilePanel.add(inputTitleLabel);
 		
-		JTextField fileField = new JTextField();
-		fileField.setEditable(false);
-		fileField.setMaximumSize(new Dimension(1000, 30));
-		inputFilePanel.add(fileField);
+		this.inputFilenameField = new JTextField();
+		this.inputFilenameField.setEditable(false);
+		this.inputFilenameField.setMaximumSize(new Dimension(1000, 30));
+		inputFilePanel.add(this.inputFilenameField);
 		
 		JButton fileButton = new JButton("File...");
+		fileButton.setActionCommand("in_file");
+		fileButton.addActionListener(this);
 		fileButton.setMaximumSize(new Dimension(40, 30));
 		inputFilePanel.add(fileButton);
 		
@@ -743,6 +746,20 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (e.getActionCommand().equals("out_clear")) {
 			this.outputArea.setText("");
 		}
+		
+		if (e.getActionCommand().equals("in_file")) {
+			if (this.currentSimulation != null) {
+				JFileChooser fileChooser = new JFileChooser();
+				fileChooser.setCurrentDirectory(new File("."));
+				
+				int selected = fileChooser.showOpenDialog(this);
+				if (selected == JFileChooser.APPROVE_OPTION) {
+					File file = fileChooser.getSelectedFile();
+					this.inputFilenameField.setText(file.getName());
+					this.currentSimulation.setInputFile(file);
+				}
+			}
+		}
 	}
 	public void handleSimulationEvent(SimulationEvent e) {
 		switch (e.type) {
@@ -803,11 +820,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.haltSimulation();
 		
 		Simulation newSimulation = Simulation.createSimulation(asmFile);
-		newSimulation.mode = 1;
 		if (newSimulation == null) {
 			this.statusBar.setText("Failed to load file.");
 			return;
 		}
+		newSimulation.mode = 1;
 		this.currentSimulation = newSimulation;
 		this.currentSimulation.addEventListener(this);
 		

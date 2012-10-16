@@ -155,8 +155,8 @@ public class Instruction {
 			}
 		}
 		
-		// jmp/callの場合は第一オペランドがRsなので順番変更
-		if ((instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) && !instruction.immediate) {
+		// jmp/call/prtの場合は第一オペランドがRsなので順番変更
+		if ((instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal || instruction.opcode == OpCode.prt) && !instruction.immediate) {
 			instruction.oplands[1] = instruction.oplands[0];
 			instruction.oplands[0] = null;
 		}
@@ -300,7 +300,7 @@ public class Instruction {
 			OpCode.add, OpCode.sub, OpCode.mul, OpCode.inv,
 			OpCode.and, OpCode.oor, OpCode.nor, OpCode.xor,
 			OpCode.sll, OpCode.srl, OpCode.sra,
-			OpCode.hlt, OpCode.prt, OpCode.scn
+			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg
 		};
 		boolean isr = false;
 		for (OpCode op : opr) {
@@ -319,6 +319,7 @@ public class Instruction {
 					}
 				}
 			}
+			
 			// additional
 			String additional = "000000";
 			if (this.opcode == OpCode.hlt)
@@ -327,6 +328,8 @@ public class Instruction {
 				additional = "000010";
 			else if (this.opcode == OpCode.scn)
 				additional = "000011";
+			else if (this.opcode == OpCode.neg)
+				additional = "000101";
 			for (int i=0; i<6; i++)
 				pattern[25+i] = additional.charAt(i);
 			

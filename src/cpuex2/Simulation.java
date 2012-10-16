@@ -1,6 +1,6 @@
 package cpuex2;
 
-import java.io.File;
+import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,7 +45,9 @@ public class Simulation implements Runnable {
 	public ArrayList<Integer> breakMemory = new ArrayList<Integer>();
 	public String lastModifiedRegister = null;
 	public Integer lastModifiedMemory = null;
-	
+	File inputFile = null;
+	FileInputStream inputStream = null;
+
 	public synchronized void addEventListener(SimulationEventListener listener) {
 		_listeners.add(listener);
 	}
@@ -97,6 +99,22 @@ public class Simulation implements Runnable {
 			this.breakMemory.add(p);
 		}
 		this.fireEvent(SimulationEventType.BREAKPOINT);
+	}
+	public void setInputFile(File f) {
+		try {
+			if (this.inputStream != null)
+				this.inputStream.close();
+			this.inputFile = f;
+			this.inputStream = new FileInputStream(f);
+		} catch (Exception e){ }
+	}
+	public void reloadInputFile() {
+		try {
+			if (this.inputStream != null) {
+				this.inputStream.close();
+				this.inputStream = new FileInputStream(this.inputFile);
+			}
+		}catch(Exception e){}
 	}
 	public void run() {
 		this.fireable = false;
@@ -208,11 +226,14 @@ public class Simulation implements Runnable {
 	
 	public String[] assemble(boolean ruby) {
 		ArrayList<String> code = new ArrayList<String>();
+		
 		for (Instruction instruction : this.program.instructions) {
 			boolean[] pattern = instruction.makeBitPattern(this.program.labels);
 			char[] patternStr = new char[36];
 			for (int i=0; i<36; i++) patternStr[i] = pattern[i] ? '1' : '0';
-			code.add(new String(patternStr) + (ruby ? (" -- " + instruction.raw) : ""));
+			
+			boolean isLast = instruction.equals(this.program.instructions[this.program.instructions.length-1]);
+			code.add(new String(patternStr) + (isLast ? ";" : ",") + (ruby ? (" -- " + instruction.raw) : ""));
 		}
 		
 		return code.toArray(new String[]{});
@@ -245,6 +266,12 @@ public class Simulation implements Runnable {
 		
 		for (String label : this.program.labels.keySet()) {
 			this.call_count.put(label, 0);
+		}
+		
+		if (this.inputStream != null) {
+			try {
+				this.reloadInputFile();
+			}catch (Exception e) {}
 		}
 	}
 	
@@ -435,13 +462,13 @@ public class Simulation implements Runnable {
 		for (int i=0; i<pattern.length(); i++) {
 			switch (pattern.charAt(i)) {
 			case 'R':
-				if (instruction.oplands[i].type != OplandType.R) return false;
+				if (instruction.oplands[i] == null || instruction.oplands[i].type != OplandType.R) return false;
 				break;
 			case 'F':
-				if (instruction.oplands[i].type != OplandType.F) return false;
+				if (instruction.oplands[i] == null || instruction.oplands[i].type != OplandType.F) return false;
 				break;
 			case 'I':
-				if (instruction.oplands[i].type != OplandType.I) return false;
+				if (instruction.oplands[i] == null || instruction.oplands[i].type != OplandType.I) return false;
 				break;
 			case 'N':
 				break;
@@ -967,13 +994,13 @@ public class Simulation implements Runnable {
 	boolean proc_prt(Instruction i) {
 		int v = 0;
 		if (i.fl) {
-			if (!verifyOplandPattern(i, "F")) return false;
+			if (!verifyOplandPattern(i, "NF")) return false;
 			
-			v = Float.floatToIntBits(fetch_f(i.oplands[0]));
+			v = Float.floatToIntBits(fetch_f(i.oplands[1]));
 			
 		} else {
-			if (!verifyOplandPattern(i, "R")) return false;
-			v = fetch_r(i.oplands[0]);
+			if (!verifyOplandPattern(i, "NR")) return false;
+			v = fetch_r(i.oplands[1]);
 		}
 		
 		byte output = 0;
@@ -992,7 +1019,7 @@ public class Simulation implements Runnable {
 		if (i.fl){
 			return false;
 		} else {
-			if (!verifyOplandPattern(i, "R")) return false;
+			if (!verifyOplandPattern(i, "RR")) return false;
 			
 			int input = 0;
 			switch (mode) {
@@ -1003,12 +1030,22 @@ public class Simulation implements Runnable {
 					return false;
 				}
 				break;
-			default:
+			case 1:
+				try {
+					input = this.inputStream.read();
+				} catch (Exception e) {
+					return false;
+				}
 				break;
 			}
-			if (input == -1) return false;
+			if (input == -1) {
+				this.cc = true;
+				return true;
+			} else {
+				this.cc = false;
+			}
 			
-			int v = fetch_r(i.oplands[0]);
+			int v = fetch_r(i.oplands[1]);
 			if (i.active_byte[0]) v = (v & (0x00FFFFFF)) + (input << 24);
 			if (i.active_byte[1]) v = (v & (0xFF00FFFF)) + (input << 16);
 			if (i.active_byte[2]) v = (v & (0xFFFF00FF)) + (input << 8);

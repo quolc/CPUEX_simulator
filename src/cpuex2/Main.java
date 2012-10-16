@@ -48,19 +48,14 @@ public class Main {
 			
 			if (asm) {
 				try {
-					String[] dat = simu.assemble(ruby);
+					Utility.println("memory_initialization_radix = 2;");
+					Utility.println("memory_initialization_vector =");
 					
-					FileWriter fw = new FileWriter("output.dat");
+					String[] dat = simu.assemble(ruby);
 					for (int i=0; i<dat.length; i++) {
-						fw.append(dat[i]);
-						if (i<dat.length-1)
-							fw.append(",\n");
-						else
-							fw.append(";\n");
+						Utility.println(dat[i]);
 					}
-					fw.close();
 				} catch (Exception e) {}
-				System.out.printf("outputed assembly file : output.dat\n", simu.total);
 			} else {
 				if (int_output) {
 					Utility.outputmode = 1;
