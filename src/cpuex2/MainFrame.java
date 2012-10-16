@@ -803,6 +803,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.haltSimulation();
 		
 		Simulation newSimulation = Simulation.createSimulation(asmFile);
+		newSimulation.mode = 1;
 		if (newSimulation == null) {
 			this.statusBar.setText("Failed to load file.");
 			return;

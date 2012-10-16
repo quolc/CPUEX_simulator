@@ -17,6 +17,7 @@ public class Main {
 			if (simu == null) return;
 			simu.initialize();
 			simu.fireable = false;
+			simu.mode = 0;
 			
 			// アセンブラ
 			boolean asm = false;

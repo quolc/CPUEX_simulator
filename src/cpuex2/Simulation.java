@@ -33,6 +33,7 @@ public class Simulation implements Runnable {
 	public Map<String, Integer> call_count = new HashMap<String, Integer>();
 	
 	// GUIシミュレーション用
+	public int mode; // 0:CUI 1:GUI
 	private ArrayList<SimulationEventListener> _listeners = new ArrayList<SimulationEventListener>();
 	public boolean running;
 	public boolean interrupt_h = false;
@@ -988,7 +989,33 @@ public class Simulation implements Runnable {
 		return true;
 	}
 	boolean proc_scn(Instruction i) {
-		
+		if (i.fl){
+			return false;
+		} else {
+			if (!verifyOplandPattern(i, "R")) return false;
+			
+			int input = 0;
+			switch (mode) {
+			case 0:
+				try {
+					input = System.in.read();
+				} catch (Exception e) {
+					return false;
+				}
+				break;
+			default:
+				break;
+			}
+			if (input == -1) return false;
+			
+			int v = fetch_r(i.oplands[0]);
+			if (i.active_byte[0]) v = (v & (0x00FFFFFF)) + (input << 24);
+			if (i.active_byte[1]) v = (v & (0xFF00FFFF)) + (input << 16);
+			if (i.active_byte[2]) v = (v & (0xFFFF00FF)) + (input << 8);
+			if (i.active_byte[3]) v = (v & (0xFFFFFF00)) + (input);
+			
+			set_r(i.oplands[0], v);
+		}
 		return true;
 	}
 	
