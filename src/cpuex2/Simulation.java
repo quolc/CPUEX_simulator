@@ -31,6 +31,7 @@ public class Simulation implements Runnable {
 	Map<OpCode, Method> proc_dic;
 	
 	public Map<String, Integer> call_count = new HashMap<String, Integer>();
+	public ArrayList<String> missing_labels = new ArrayList<String>();
 	
 	// GUIシミュレーション用
 	public int mode; // 0:CUI 1:GUI
@@ -243,6 +244,18 @@ public class Simulation implements Runnable {
 		
 		simulation.program = Program.parseAsmFile(asmFile);
 		if (simulation.program == null) return null;
+		
+		// finding missing label
+		for (Instruction instruction : simulation.program.instructions) {
+			if ((instruction.opcode == OpCode.jmp || instruction.opcode == OpCode.cal) && instruction.immediate) {
+				String label = instruction.oplands[0].label;
+				
+				if (!simulation.program.labels.containsKey(label)) {
+					if (!simulation.missing_labels.contains(label))
+						simulation.missing_labels.add(label);
+				}
+			}
+		}
 		
 		return simulation;
 	}

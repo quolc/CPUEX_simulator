@@ -15,6 +15,12 @@ public class Main {
 			
 			Simulation simu = Simulation.createSimulation(new File(args[args.length-1]));
 			if (simu == null) return;
+			
+			// display missing labels
+			for (String label : simu.missing_labels) {
+				Utility.errPrintf("Missing Label: %s\n", label);
+			}
+			
 			simu.initialize();
 			simu.fireable = false;
 			simu.mode = 0;

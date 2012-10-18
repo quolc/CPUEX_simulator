@@ -830,6 +830,11 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.statusBar.setText("Failed to load file.");
 			return;
 		}
+		// display missing labels
+		for (String label : newSimulation.missing_labels) {
+			this.outputArea.append(String.format("Missing Label: %s\n", label));
+		}
+		
 		newSimulation.mode = 1;
 		this.currentSimulation = newSimulation;
 		this.currentSimulation.addEventListener(this);
