@@ -17,7 +17,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 	JLabel statusBar;
 	JTable codeTable, registerTable, memoryTable;
 	JTextArea outputArea;
-	JTextField inputFilenameField;
+	JTextField inputFilenameField, stepCountField;
 	JScrollPane codePane, registerPane, outputPane, memoryPane;
 	JSplitPane mainPane, upperPane, lowerPane, ioPane;
 	
@@ -156,11 +156,15 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		buttonStep.setText("Step");
 		buttonStep.setActionCommand("step");
 		
+		this.stepCountField = new JTextField();
+		this.stepCountField.setText("0");
+		
 		this.getContentPane().add(this.toolBar, BorderLayout.NORTH);
 		this.toolBar.add(buttonRun);
 		this.toolBar.add(buttonPause);
 		this.toolBar.add(buttonHalt);
 		this.toolBar.add(buttonStep);
+		this.toolBar.add(this.stepCountField);
 		
 		buttonRun.addActionListener(this);
 		buttonPause.addActionListener(this);
@@ -645,26 +649,26 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		if (this.currentSimulation.error) pcstr = "error";
 		if (this.currentSimulation.halt) pcstr = "halt";
 		mt.addRow(new String[]{
-			"pc" + (currentSimulation.breakRegister.contains("pc") ? "*" : ""), pcstr, "", ""
+			"pc" + (currentSimulation.breakRegister.contains(68) ? "*" : ""), pcstr, "", ""
 		});
 		mt.addRow(new String[] {
-			"Z" + (currentSimulation.breakRegister.contains("Z") ? "*" : "") + (cz ? " " : ""),
+			"Z" + (currentSimulation.breakRegister.contains(64) ? "*" : "") + (cz ? " " : ""),
 			this.currentSimulation.cz ? "1" : "0",
-			"N" + (currentSimulation.breakRegister.contains("N") ? "*" : "") + (cn ? " " : ""),
+			"N" + (currentSimulation.breakRegister.contains(65) ? "*" : "") + (cn ? " " : ""),
 			this.currentSimulation.cn ? "1" : "0"
 		});
 		mt.addRow(new String[] {
-			"V" + (currentSimulation.breakRegister.contains("V") ? "*" : "") + (cv ? " " : ""),
+			"V" + (currentSimulation.breakRegister.contains(66) ? "*" : "") + (cv ? " " : ""),
 			this.currentSimulation.cv ? "1" : "0",
-			"C" + (currentSimulation.breakRegister.contains("C") ? "*" : "") + (cc ? " " : ""),
+			"C" + (currentSimulation.breakRegister.contains(67) ? "*" : "") + (cc ? " " : ""),
 			this.currentSimulation.cc ? "1" : "0"
 		});
 		for (int i=0; i<32; i++) {
 			mt.addRow(new String[]{
-				String.format("r%d" + (currentSimulation.breakRegister.contains(String.format("r%d", i)) ? "*" : "")
+				String.format("r%d" + (currentSimulation.breakRegister.contains(i) ? "*" : "")
 						+ (cr[i] ? " " : ""), i),
 				Integer.toString(this.currentSimulation.r[i]),
-				String.format("f%d" + (currentSimulation.breakRegister.contains(String.format("f%d", i)) ? "*" : "")
+				String.format("f%d" + (currentSimulation.breakRegister.contains(i+32) ? "*" : "")
 						+ (cf[i] ? " " : ""), i),
 				Float.toString(this.currentSimulation.f[i])
 			});
@@ -767,11 +771,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.updateCode();
 			this.updateRegister(false);
 			this.updateMemory(-1, false);
+			this.stepCountField.setText(Integer.toString(this.currentSimulation.total));
 			break;
 		case STEP:
 			this.updateCode();
 			this.updateRegister(true);
 			this.statusBar.setText("Step.");
+			this.stepCountField.setText(Integer.toString(this.currentSimulation.total));
 			break;
 		case EXIT:
 			this.updateRegister(false);

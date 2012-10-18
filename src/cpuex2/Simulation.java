@@ -41,9 +41,9 @@ public class Simulation implements Runnable {
 	public boolean fireable; // fireする必要がないときはfalseにしておくと軽く動く
 	public ArrayList<Integer> updatedAddr = new ArrayList<Integer>();
 	public ArrayList<Integer> breakPoints = new ArrayList<Integer>();
-	public ArrayList<String> breakRegister = new ArrayList<String>();
+	public ArrayList<Integer> breakRegister = new ArrayList<Integer>();
 	public ArrayList<Integer> breakMemory = new ArrayList<Integer>();
-	public String lastModifiedRegister = null;
+	public Integer lastModifiedRegister = null;
 	public Integer lastModifiedMemory = null;
 	File inputFile = null;
 	FileInputStream inputStream = null;
@@ -85,10 +85,32 @@ public class Simulation implements Runnable {
 		this.fireEvent(SimulationEventType.BREAKPOINT);
 	}
 	public void toggleBreakRegister(String p) {
-		if (this.breakRegister.contains(p)) {
-			this.breakRegister.remove((String)p);
+		// r0-31 : 0-31
+		// f0-31 : 32-63
+		// cn : 64
+		// cz : 65
+		// cv : 66
+		// cc : 67
+		Integer regnum = 0;
+		if (p.charAt(0) == 'r') {
+			regnum = Integer.parseInt(p.substring(1));
+		} else if (p.charAt(0) == 'f') {
+			regnum = Integer.parseInt(p.substring(1)) + 32;
+		} else if (p.equals("Z")) {
+			regnum = 64;
+		} else if (p.equals("N")) {
+			regnum = 65;
+		} else if (p.equals("V")) {
+			regnum = 66;
+		} else if (p.equals("C")) {
+			regnum = 67;
+		} else if (p.equals("pc")) {
+			regnum = 68;
+		}
+		if (this.breakRegister.contains(regnum)) {
+			this.breakRegister.remove(regnum);
 		} else {
-			this.breakRegister.add(p);
+			this.breakRegister.add(regnum);
 		}
 		this.fireEvent(SimulationEventType.BREAKPOINT);
 	}
@@ -152,10 +174,11 @@ public class Simulation implements Runnable {
 			
 			// レジスタブレーク
 			if (this.breakRegister.contains(lastModifiedRegister) ||
-				(this.breakRegister.contains("cn") && (this.cn != ln)) ||
-				(this.breakRegister.contains("cz") && (this.cz != lz)) ||
-				(this.breakRegister.contains("cv") && (this.cv != lv)) ||
-				(this.breakRegister.contains("cc") && (this.cc != lc))) {
+				(this.breakRegister.contains(64) && (this.cz != lz)) ||
+				(this.breakRegister.contains(65) && (this.cn != ln)) ||
+				(this.breakRegister.contains(66) && (this.cv != lv)) ||
+				(this.breakRegister.contains(67) && (this.cc != lc)) ||
+				(this.breakRegister.contains(68))) {
 				this.lastModifiedRegister = null;
 				this.fireable = true;
 				this.fireEvent(SimulationEventType.MEMORY);
@@ -206,13 +229,13 @@ public class Simulation implements Runnable {
 		this.f = new float[32];
 		this.ram = new int[ramsize];
 		this.proc_dic = new HashMap<OpCode, Method>();
-		
+		/*
 		for (OpCode code : OpCode.values()) {
 			try {
 				Method method = Simulation.class.getDeclaredMethod("proc_" + code.toString(), Instruction.class);
 				proc_dic.put(code, method);
 			} catch (Exception e) {}
-		}
+		}*/
 	}
 	
 	public static Simulation createSimulation(File asmFile) {
@@ -399,8 +422,89 @@ public class Simulation implements Runnable {
 		
 		if (condition) {
 			try {
-				Method method = (Method)proc_dic.get(instruction.opcode);
-				Boolean ret = (Boolean)method.invoke(this, instruction);
+				// method invoke
+				Boolean ret = true;
+				switch (instruction.opcode) {
+				case add:
+					ret = this.proc_add(instruction);
+					break;
+				case sub:
+					ret = this.proc_sub(instruction);
+					break;
+				case mul:
+					ret = this.proc_mul(instruction);
+					break;
+				case inv:
+					ret = this.proc_inv(instruction);
+					break;
+				case and:
+					ret = this.proc_and(instruction);
+					break;
+				case oor:
+					ret = this.proc_oor(instruction);
+					break;
+				case nor:
+					ret = this.proc_nor(instruction);
+					break;
+				case xor:
+					ret = this.proc_xor(instruction);
+					break;
+				case sll:
+					ret = this.proc_sll(instruction);
+					break;
+				case srl:
+					ret = this.proc_srl(instruction);
+					break;
+				case sra:
+					ret = this.proc_sra(instruction);
+					break;
+				case mov:
+					ret = this.proc_mov(instruction);
+					break;
+				case mif:
+					ret = this.proc_mif(instruction);
+					break;
+				case mfi:
+					ret = this.proc_mfi(instruction);
+					break;
+				case jmp:
+					ret = this.proc_jmp(instruction);
+					break;
+				case cal:
+					ret = this.proc_cal(instruction);
+					break;
+				case ldw:
+					ret = this.proc_ldw(instruction);
+					break;
+				case stw:
+					ret = this.proc_stw(instruction);
+					break;
+				case ldf:
+					ret = this.proc_ldf(instruction);
+					break;
+				case stf:
+					ret = this.proc_stf(instruction);
+					break;
+				case hlt:
+					ret = this.proc_hlt(instruction);
+					break;
+				case prt:
+					ret = this.proc_prt(instruction);
+					break;
+				case scn:
+					ret = this.proc_scn(instruction);
+					break;
+				case nop:
+					ret = true;
+					break;
+				case neg:
+					ret = this.proc_neg(instruction);
+					break;
+				default:
+					Method method = (Method)proc_dic.get(instruction.opcode);
+					ret = (Boolean)method.invoke(this, instruction);
+				}
+				
 				if (!ret) {
 					Utility.errPrintf("An error happened while executing %s.\n", instruction.raw);
 					this.error = true;
@@ -442,14 +546,14 @@ public class Simulation implements Runnable {
 		if (o.index != 0) {
 			this.r[o.index] = v;
 			if (this.running)
-				this.lastModifiedRegister = String.format("r%d", o.index);
+				this.lastModifiedRegister = o.index;
 		}
 	}
 	void set_f(Opland o, float v) {
 		if (o.index != 0) {
 			this.f[o.index] = v;
 			if (this.running)
-				this.lastModifiedRegister = String.format("f%d", o.index);
+				this.lastModifiedRegister = o.index+32;
 		}
 	}
 	
