@@ -513,6 +513,9 @@ public class Simulation implements Runnable {
 				case neg:
 					ret = this.proc_neg(instruction);
 					break;
+				case sqr:
+					ret = this.proc_sqr(instruction);
+					break;
 				default:
 					Method method = (Method)proc_dic.get(instruction.opcode);
 					ret = (Boolean)method.invoke(this, instruction);
@@ -721,7 +724,27 @@ public class Simulation implements Runnable {
 				cc = false;
 			}
 		} else {
-			return false; // 整数divは実装しない
+			// TODO: デバッグ用。あとで消すように
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a / b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = false;
+			}
+			// TODO: ここまでデバッグ用
+//			return false; // 整数divは実装しない
 		}
 		return true;
 	}
@@ -737,6 +760,21 @@ public class Simulation implements Runnable {
 				cn = (c < 0);
 				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
 				cc = false;
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+	boolean proc_sqr(Instruction i) {
+		if (i.fl) {
+			float a, c;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			c = (float)Math.sqrt((float)a);
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				
 			}
 		} else {
 			return false;

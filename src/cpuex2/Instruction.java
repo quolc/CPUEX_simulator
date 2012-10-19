@@ -11,7 +11,8 @@ enum OpCode {
 	jmp, cal,
 	ldw, stw, ldf, stf,
 	hlt, prt, scn,
-	nop, neg
+	nop,
+	neg, sqr
 }
 enum Condition {
 	AL, NV, EQ, NE, MI, PL, VS, VC,
@@ -330,6 +331,8 @@ public class Instruction {
 				additional = "000011";
 			else if (this.opcode == OpCode.neg)
 				additional = "000101";
+			else if (this.opcode == OpCode.sqr)
+				additional = "000110";
 			for (int i=0; i<6; i++)
 				pattern[25+i] = additional.charAt(i);
 			
