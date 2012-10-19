@@ -544,13 +544,18 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		hexRadio.setActionCommand("out_hex");
 		hexRadio.addActionListener(this);
 		hexRadio.setSelected(true);
+		JRadioButton asciiRadio = new JRadioButton("Ascii");
+		asciiRadio.setActionCommand("out_ascii");
+		asciiRadio.addActionListener(this);
 		
 		ButtonGroup outGroup = new ButtonGroup();
 		outGroup.add(intRadio);
 		outGroup.add(hexRadio);
+		outGroup.add(asciiRadio);
 		
 		formatRadioPanel.add(intRadio);
 		formatRadioPanel.add(hexRadio);
+		formatRadioPanel.add(asciiRadio);
 		formatPanel.add(formatRadioPanel);
 		
 		panel.add(formatPanel);
@@ -747,6 +752,10 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.outputmode = 0;
 		}
 		
+		if (e.getActionCommand().equals("out_ascii")) {
+			this.outputmode = 2;
+		}
+		
 		if (e.getActionCommand().equals("out_clear")) {
 			this.outputArea.setText("");
 		}
@@ -804,6 +813,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 					}
 					this.outputArea.append(String.format("%d\n", val));
 				}
+				break;
+			case 2:
+				this.outputArea.append(new String(new char[]{ (char)b }));
 				break;
 			}
 			break;

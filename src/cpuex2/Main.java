@@ -30,8 +30,9 @@ public class Main {
 			boolean ruby = false;
 			boolean int_output = false;
 			boolean bin_output = false;
+			boolean asc_output = false;
 			
-			Getopt options = new Getopt("simulator", args, "aAib");
+			Getopt options = new Getopt("simulator", args, "aAibc");
 			
 			int c;
 			while ((c = options.getopt()) != -1) {
@@ -48,6 +49,9 @@ public class Main {
 					break;
 				case 'b':
 					bin_output = true;
+					break;
+				case 'c':
+					asc_output = true;
 					break;
 				}
 			}
@@ -68,6 +72,9 @@ public class Main {
 				}
 				if (bin_output) {
 					Utility.outputmode = 2;
+				}
+				if (asc_output){
+					Utility.outputmode = 3;
 				}
 				
 				long start = java.lang.System.currentTimeMillis();

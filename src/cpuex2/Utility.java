@@ -31,7 +31,7 @@ public class Utility {
 		if (showOnTerminal) {
 			switch (outputmode) {
 			case 0:
-				System.out.printf("%02x", b);
+				System.out.printf("%02x", b); // デフォルトはヘックス
 				break;
 			case 1:
 				buffer.add(b);
@@ -48,7 +48,10 @@ public class Utility {
 			case 2:
 				try {
 					System.out.write(new byte[]{b});
-				}catch (Exception e){}
+				} catch (Exception e){}
+				break;
+			case 3:
+				System.out.print((char)b);
 				break;
 			}
 		}
