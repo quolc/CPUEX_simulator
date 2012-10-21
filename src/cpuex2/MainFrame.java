@@ -780,13 +780,13 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			this.updateCode();
 			this.updateRegister(false);
 			this.updateMemory(-1, false);
-			this.stepCountField.setText(Integer.toString(this.currentSimulation.total));
+			this.stepCountField.setText(Long.toString(this.currentSimulation.total));
 			break;
 		case STEP:
 			this.updateCode();
 			this.updateRegister(true);
 			this.statusBar.setText("Step.");
-			this.stepCountField.setText(Integer.toString(this.currentSimulation.total));
+			this.stepCountField.setText(Long.toString(this.currentSimulation.total));
 			break;
 		case EXIT:
 			this.updateRegister(false);

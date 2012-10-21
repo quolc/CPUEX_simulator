@@ -88,7 +88,11 @@ public class Main {
 					Utility.errPrintf("%s: %d\n", entry.getKey(), entry.getValue());
 				}
 				
-				Utility.errPrintf("%d ms (%d instructions/sec)\n", end - start, simu.total / (end-start) * 1000);
+				if (end-start > 0)
+					Utility.errPrintf("%d ms (%d instructions/sec)\n", end - start, simu.total / (end-start) * 1000);
+				else
+					Utility.errPrintf("%d ms (inf instructions/sec)\n", end - start);
+				
 				Utility.errPrintf("(total %d instructions executed)\n", simu.total);
 			}
 		}

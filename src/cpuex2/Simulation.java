@@ -27,8 +27,11 @@ public class Simulation implements Runnable {
 	public boolean exit;
 	public boolean error;
 	public String error_desc=null;
-	public int total;
+	public long total;
 	Map<OpCode, Method> proc_dic;
+	
+	Instruction past;
+	int pastpc;
 	
 	public Map<String, Integer> call_count = new HashMap<String, Integer>();
 	public ArrayList<String> missing_labels = new ArrayList<String>();
@@ -377,7 +380,19 @@ public class Simulation implements Runnable {
 			return;
 		}
 		
-		Instruction instruction = program.instructions[pc];
+		Instruction instruction = null;
+		try {
+			instruction = program.instructions[pc];
+		} catch (Exception e) {
+			Utility.errPrintf("Can not load instruction from pc %d after pc %d.\n", this.pc, this.pastpc);
+			this.error = true;
+			this.error_desc = String.format("Can not load instruction from pc %d after pc %d.\n", this.pc, this.pastpc);
+			return;
+		}
+		
+		this.past = instruction;
+		this.pastpc = this.pc;
+		
 		total++;
 		boolean jumped = false;
 		

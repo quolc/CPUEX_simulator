@@ -42,4 +42,3 @@ _min_caml_start: # main entry point
 	prt2	r2
 	prt1	r2
    # main program end
-	hlt
