@@ -563,7 +563,7 @@ public class Simulation implements Runnable {
 		
 		// PC処理
 		if (!jumped && !this.error) pc++;
-		if (pc >= program.instructions.length && !halt) {
+		if (pc == program.instructions.length && !halt) {
 			this.exit = true;
 			this.fireEvent(SimulationEventType.EXIT);
 		}

@@ -5,4 +5,7 @@
 	finv	f3, f1
 	fmul	f4, f2, f3
 	mfi	r3, f4
-	prt	r3
+	prt8	r3
+	prt4	r3
+	prt2	r3
+	prt1	r3
