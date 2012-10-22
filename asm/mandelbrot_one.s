@@ -6,9 +6,6 @@ iloop.126:
 	subis	r0, r2, 0
 	jmpine	jmpeq_else.179
 	addi	r2, r0, 1
-	prt8	r2
-	prt4	r2
-	prt2	r2
 	prt1	r2
 	jmp	r31
 jmpeq_else.179:
@@ -45,9 +42,6 @@ jmpeq_else.179:
 	jmpi	iloop.126
 jmple_else.181:
 	addi	r2, r0, 0
-	prt8	r2
-	prt4	r2
-	prt2	r2
 	prt1	r2
 	jmp	r31
 xloop.110:
@@ -60,7 +54,7 @@ jmpge_else.182:
 	stw	r1, r1, -7
 	addi	r1, r1, -7
 	stw	r31, r1, 1
-	cali	min_caml_float_of_int
+	cali	external_float_of_int
 	ldw	r31, r1, 1
 	ldw	r1, r1, 0
 	stw	r1, r1, -7
@@ -85,7 +79,7 @@ jmpge_else.182:
 	stw	r1, r1, -9
 	addi	r1, r1, -9
 	stw	r31, r1, 1
-	cali	min_caml_float_of_int
+	cali	external_float_of_int
 	ldw	r31, r1, 1
 	ldw	r1, r1, 0
 	stw	r1, r1, -9
@@ -105,7 +99,7 @@ jmpge_else.182:
 	oori	r14, r14, 0
 	mif	f2, r14, r0
 	fsub	f6, f1, f2
-	addi	r2, r0, 1000
+	addi	r2, r0, 1
 	addi	r14, r0, 0
 	slli	r14, r14, 16
 	oori	r14, r14, 0
@@ -166,7 +160,7 @@ _min_caml_start: # main entry point
 	ldw	r1, r1, 0
    # main program end
 	hlt
-min_caml_float_of_int:
+external_float_of_int:
 	subis	r0, r2, 0
 	jmpilt	float_of_int.1 	#minus
 	addi	r6, r0, 128
@@ -193,11 +187,11 @@ float_of_int.22:
 	fadd	f3, f3, f2
 	subis	r5, r5, 1
 	jmpigt	float_of_int.22
-	cali	min_caml_float_of_int
+	cali	external_float_of_int
 	fadd	f1, f1, f3
 	jmp	r31
 float_of_int.1:
-	muli	r2, r2, -1
+	subs	r2, r0, r2
 	addi	r6, r0, 128
 	slli	r6, r6, 16	# r6 = 8388608
 	subs	r0, r2, r6
@@ -221,3 +215,11 @@ float_of_int.31:
 	slli	r7, r7, 24	# r7 = 0x4B000000
 	mif	f2, r7		# f2 = 8388608.0
 	fmov	f1, f0
+float_of_int.32:
+	fadd	f3, f3, f2
+	subis	r5, r5, 1
+	jmpigt	float_of_int.32
+	cali	external_float_of_int
+	fadd	f1, f1, f3
+	fneg	f1, f1
+	jmp	r31

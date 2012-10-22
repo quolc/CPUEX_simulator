@@ -266,13 +266,22 @@ public class Simulation implements Runnable {
 	public String[] assemble(boolean ruby) {
 		ArrayList<String> code = new ArrayList<String>();
 		
+		int p = 0;
 		for (Instruction instruction : this.program.instructions) {
 			boolean[] pattern = instruction.makeBitPattern(this.program.labels);
 			char[] patternStr = new char[36];
 			for (int i=0; i<36; i++) patternStr[i] = pattern[i] ? '1' : '0';
 			
+			for (Map.Entry<String, Integer> entry : this.program.labels.entrySet()) {
+				if (entry.getValue() == p) {
+					if (ruby) {
+						code.add("-- " + entry.getKey());
+					}
+				}
+			}
+			
 			boolean isLast = instruction.equals(this.program.instructions[this.program.instructions.length-1]);
-			code.add(new String(patternStr) + (isLast ? ";" : ",") + (ruby ? (" -- " + instruction.raw) : ""));
+			code.add(new String(patternStr) + (isLast ? ";" : ",") + (ruby ? (" -- " + Integer.toString(p++) + " " + instruction.raw) : ""));
 		}
 		
 		return code.toArray(new String[]{});
@@ -619,7 +628,7 @@ public class Simulation implements Runnable {
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
-			c = a + b;
+			c = FPU.fadd(a, b);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				cz = (c == 0);
@@ -657,7 +666,7 @@ public class Simulation implements Runnable {
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
-			c = a - b;
+			c = FPU.fsub(a, b);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				cz = (c == 0);
@@ -695,7 +704,7 @@ public class Simulation implements Runnable {
 			if (!verifyOplandPattern(i, "FFF")) return false;
 			a = fetch_f(i.oplands[1]);
 			b = fetch_f(i.oplands[2]);
-			c = a * b;
+			c = FPU.fmul(a, b);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				if (c == 0)	cz = true;
@@ -704,6 +713,7 @@ public class Simulation implements Runnable {
 				cc = false;
 			}
 		} else {
+			Utility.errPrintf("You use MUL operation. It is obsolete!\n");
 			int a, b, c;
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "RRI")) return false;
@@ -730,7 +740,7 @@ public class Simulation implements Runnable {
 			float a, c;
 			if (!verifyOplandPattern(i, "FF")) return false;
 			a = fetch_f(i.oplands[1]);
-			c = 1 / a;
+			c = FPU.finv(a);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				cz = (c == 0);
@@ -768,7 +778,7 @@ public class Simulation implements Runnable {
 			float a, c;
 			if (!verifyOplandPattern(i, "FF")) return false;
 			a = fetch_f(i.oplands[1]);
-			c = -a;
+			c = FPU.fneg(a);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				cz = (c == 0);
@@ -786,7 +796,7 @@ public class Simulation implements Runnable {
 			float a, c;
 			if (!verifyOplandPattern(i, "FF")) return false;
 			a = fetch_f(i.oplands[1]);
-			c = (float)Math.sqrt((float)a);
+			c = FPU.fsqr(a);
 			set_f(i.oplands[0], c);
 			if (i.conditionset) {
 				

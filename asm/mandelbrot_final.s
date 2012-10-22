@@ -5,10 +5,7 @@ dbl.105:
 iloop.126:
 	subis	r0, r2, 0
 	jmpine	jmpeq_else.179
-	addi	r2, r0, 1
-	prt8	r2
-	prt4	r2
-	prt2	r2
+	addi	r2, r0, 49
 	prt1	r2
 	jmp	r31
 jmpeq_else.179:
@@ -44,10 +41,7 @@ jmpeq_else.179:
 	ldf	f5, r1, -1
 	jmpi	iloop.126
 jmple_else.181:
-	addi	r2, r0, 0
-	prt8	r2
-	prt4	r2
-	prt2	r2
+	addi	r2, r0, 48
 	prt1	r2
 	jmp	r31
 xloop.110:
@@ -197,7 +191,7 @@ float_of_int.22:
 	fadd	f1, f1, f3
 	jmp	r31
 float_of_int.1:
-	muli	r2, r2, -1
+	sub	r2, r0, r2
 	addi	r6, r0, 128
 	slli	r6, r6, 16	# r6 = 8388608
 	subs	r0, r2, r6
@@ -221,3 +215,11 @@ float_of_int.31:
 	slli	r7, r7, 24	# r7 = 0x4B000000
 	mif	f2, r7		# f2 = 8388608.0
 	fmov	f1, f0
+float_of_int.32:
+	fadd	f3, f3, f2
+	subis	r5, r5, 1
+	jmpigt	float_of_int.32
+	cali	min_caml_float_of_int
+	fadd	f1, f1, f3
+	fneg	f1, f1
+	jmp	r31
