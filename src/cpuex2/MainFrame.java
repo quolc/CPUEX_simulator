@@ -45,7 +45,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		// Initialize itself
 //		this.setExtendedState(Frame.MAXIMIZED_BOTH);
-		this.setMinimumSize(new Dimension(1000, 800));
+		this.setMinimumSize(new Dimension(1000, 600));
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.getContentPane().setLayout(new BorderLayout());
 		
