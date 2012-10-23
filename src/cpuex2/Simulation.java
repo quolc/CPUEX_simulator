@@ -35,6 +35,7 @@ public class Simulation implements Runnable {
 	
 	public Map<String, Integer> call_count = new HashMap<String, Integer>();
 	public ArrayList<String> missing_labels = new ArrayList<String>();
+	public boolean[] verified;
 	
 	// GUIシミュレーション用
 	public int mode; // 0:CUI 1:GUI
@@ -315,6 +316,9 @@ public class Simulation implements Runnable {
 		for (String label : this.program.labels.keySet()) {
 			this.call_count.put(label, 0);
 		}
+		this.verified = new boolean[this.program.instructions.length];
+		for (int i=0; i<this.program.instructions.length; i++)
+			this.verified[i] = false;
 		
 		if (this.inputStream != null) {
 			try {
@@ -382,6 +386,16 @@ public class Simulation implements Runnable {
 	}
 	
 	public void step() {
+		if (total % 1000000 == 0) {
+			long now = java.lang.System.currentTimeMillis();
+			if (now-Main.start > 0)
+				Utility.errPrintf("%d ms (%d instructions/sec)\n", now - Main.start, total / (now-Main.start) * 1000);
+			else
+				Utility.errPrintf("%d ms (inf instructions/sec)\n", now - Main.start);
+			
+			Utility.errPrintf("(total %d instructions executed)\n", total);
+		}
+		
 		if (this.halt || this.exit || this.error) return;
 		if (this.pc >= this.program.instructions.length) {
 			this.exit = true;
@@ -557,7 +571,7 @@ public class Simulation implements Runnable {
 		}
 		
 		// 同期実行時はステップごとにイベント発行
-		if (!this.running) {
+		if (this.mode == 1 && !this.running) {
 			this.fireEvent(SimulationEventType.STEP);
 		}
 		
@@ -603,6 +617,12 @@ public class Simulation implements Runnable {
 	//     I: Integer immediate
 	//     N: Not use
 	boolean verifyOplandPattern(Instruction instruction, String pattern) {
+		// TODO: 
+		// オペランドパターンは正しいと仮定してしまっている。
+		// 一度検証したら以降検証しなくていいようにあとで直す
+		if (true)
+			return true;
+		
 		for (int i=0; i<pattern.length(); i++) {
 			switch (pattern.charAt(i)) {
 			case 'R':
@@ -713,7 +733,7 @@ public class Simulation implements Runnable {
 				cc = false;
 			}
 		} else {
-			Utility.errPrintf("You use MUL operation. It is obsolete!\n");
+//			Utility.errPrintf("You use MUL operation. It is obsolete!\n");
 			int a, b, c;
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "RRI")) return false;
@@ -1122,9 +1142,11 @@ public class Simulation implements Runnable {
 				return false;
 			}
 			
-			if (!this.updatedAddr.contains(addr))
-				this.updatedAddr.add(addr);
-			this.fireEvent(SimulationEventType.MEMORY);
+			if (this.mode == 1) {
+				if (!this.updatedAddr.contains(addr))
+					this.updatedAddr.add(addr);
+				this.fireEvent(SimulationEventType.MEMORY);
+			}
 			if (this.running)
 				this.lastModifiedMemory = addr;
 		}
@@ -1161,10 +1183,11 @@ public class Simulation implements Runnable {
 			return false;
 		}
 		
-		if (!this.updatedAddr.contains(addr))
-			this.updatedAddr.add(addr);
-		this.fireEvent(SimulationEventType.MEMORY);
-		
+		if (this.mode == 1) {
+			if (!this.updatedAddr.contains(addr))
+				this.updatedAddr.add(addr);
+			this.fireEvent(SimulationEventType.MEMORY);
+		}
 		if (this.running)
 			this.lastModifiedMemory = addr;
 		

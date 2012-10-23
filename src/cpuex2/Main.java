@@ -7,6 +7,8 @@ import java.util.Map;
 import gnu.getopt.*;
 
 public class Main {
+	public static long start, end;
+	
 	public static void main(String[] args) {
 		if (args.length == 0) {
 			MainFrame frame = MainFrame.getInstance();
@@ -77,11 +79,11 @@ public class Main {
 					Utility.outputmode = 3;
 				}
 				
-				long start = java.lang.System.currentTimeMillis();
+				start = java.lang.System.currentTimeMillis();
 				while(!simu.halt && !simu.error && !simu.exit) {
 					simu.step();
 				}
-				long end = java.lang.System.currentTimeMillis();
+				end = java.lang.System.currentTimeMillis();
 				
 				// call統計の出力
 				for (Map.Entry<String, Integer> entry : simu.call_count.entrySet()) {
