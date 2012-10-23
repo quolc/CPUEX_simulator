@@ -386,7 +386,7 @@ public class Simulation implements Runnable {
 	}
 	
 	public void step() {
-		if (total % 1000000 == 0) {
+		if (total % 10000000 == 0) {
 			long now = java.lang.System.currentTimeMillis();
 			if (now-Main.start > 0)
 				Utility.errPrintf("%d ms (%d instructions/sec)\n", now - Main.start, total / (now-Main.start) * 1000);

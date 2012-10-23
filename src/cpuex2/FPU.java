@@ -222,7 +222,7 @@ public class FPU {
 		boolean iszero = false;
 		
 		// zero detection
-		if (ai == 0 || bi == 0) iszero = true;
+		if (a_exp == 0 || b_exp == 0) iszero = true;
 		
 		// Step 1.
 		int ah, al, bh, bl;
