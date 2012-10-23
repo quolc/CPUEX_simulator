@@ -301,7 +301,7 @@ public class Instruction {
 			OpCode.add, OpCode.sub, OpCode.mul, OpCode.inv,
 			OpCode.and, OpCode.oor, OpCode.nor, OpCode.xor,
 			OpCode.sll, OpCode.srl, OpCode.sra,
-			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg
+			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg, OpCode.sqr
 		};
 		boolean isr = false;
 		for (OpCode op : opr) {
