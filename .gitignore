@@ -4,5 +4,8 @@
 *.jar
 *.war
 *.ear
+*.ppm
+*.s
+*.coe
 
 .DS_Store

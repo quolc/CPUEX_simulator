@@ -329,7 +329,7 @@ public class Simulation implements Runnable {
 	
 	public boolean willExecuteNextStep() {
 		Instruction instruction = program.instructions[pc];
-
+		
 		// condition flag
 		boolean condition = false;
 		switch (instruction.condition) {
@@ -502,6 +502,9 @@ public class Simulation implements Runnable {
 					break;
 				case sll:
 					ret = this.proc_sll(instruction);
+					break;
+				case sla:
+					ret = this.proc_sla(instruction);
 					break;
 				case srl:
 					ret = this.proc_srl(instruction);
@@ -733,7 +736,7 @@ public class Simulation implements Runnable {
 				cc = false;
 			}
 		} else {
-//			Utility.errPrintf("You use MUL operation. It is obsolete!\n");
+			Utility.errPrintf("You use MUL operation. It is obsolete!\n");
 			int a, b, c;
 			if (i.immediate) {
 				if (!verifyOplandPattern(i, "RRI")) return false;
@@ -927,7 +930,7 @@ public class Simulation implements Runnable {
 		}
 		return true;
 	}
-
+	
 	boolean proc_sll(Instruction i) {
 		if (i.fl) {
 			return false;
@@ -953,6 +956,38 @@ public class Simulation implements Runnable {
 		}
 		return true;
 	}
+	
+	boolean proc_sla(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a << b;
+			if (FPU.bit_check(a, 31)) {
+				FPU.bit_set(c, 31);
+			} else {
+				FPU.bit_clear(c, 31);
+			}
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
+			}
+		}
+		return true;
+	}
+	
 	boolean proc_srl(Instruction i) {
 		if (i.fl) {
 			return false;

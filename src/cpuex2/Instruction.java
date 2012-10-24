@@ -12,7 +12,8 @@ enum OpCode {
 	ldw, stw, ldf, stf,
 	hlt, prt, scn,
 	nop,
-	neg, sqr
+	neg, sqr,
+	sla // 整数mulを置換
 }
 enum Condition {
 	AL, NV, EQ, NE, MI, PL, VS, VC,
@@ -263,7 +264,9 @@ public class Instruction {
 				break;
 			case mul:
 				if (this.fl) opc = "10110";
-				else opc = "10010";
+				break;
+			case sla:
+				opc = "10010";
 				break;
 			case inv:
 				if (this.fl) opc = "10111";
@@ -275,6 +278,7 @@ public class Instruction {
 			case oor:
 				opc = "11001";
 				break;
+				
 			case nor:
 				opc = "11010";
 				break;
@@ -300,7 +304,7 @@ public class Instruction {
 			OpCode.mov, OpCode.mif, OpCode.mfi, OpCode.jmp, OpCode.cal,
 			OpCode.add, OpCode.sub, OpCode.mul, OpCode.inv,
 			OpCode.and, OpCode.oor, OpCode.nor, OpCode.xor,
-			OpCode.sll, OpCode.srl, OpCode.sra,
+			OpCode.sll, OpCode.sla, OpCode.srl, OpCode.sra,
 			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg, OpCode.sqr
 		};
 		boolean isr = false;
@@ -352,8 +356,9 @@ public class Instruction {
 				opc = "00000";
 				switch(this.opcode) {
 				case mov:
-					if (this.fl) opc = "00101";
-					else opc = "00001";
+//					if (this.fl) opc = "00101";
+//					else opc = "00001";
+					opc = "00001";
 					break;
 				case mif:
 					opc = "00010";
@@ -377,7 +382,9 @@ public class Instruction {
 					break;
 				case mul:
 					if (this.fl) opc = "10110";
-					else opc = "10010";
+					break;
+				case sla:
+					opc = "10010";
 					break;
 				case inv:
 					if (this.fl) opc = "10111";
@@ -415,7 +422,7 @@ public class Instruction {
 			OpCode.ldw, OpCode.stw, OpCode.ldf, OpCode.stf,
 			OpCode.add, OpCode.sub, OpCode.mul,
 			OpCode.and, OpCode.oor, OpCode.nop, OpCode.xor,
-			OpCode.sll, OpCode.srl, OpCode.sra
+			OpCode.sll, OpCode.sla, OpCode.srl, OpCode.sra
 		};
 		boolean isa = false;
 		for (OpCode op : opi) {

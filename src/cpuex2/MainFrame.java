@@ -81,7 +81,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		this.setLocationRelativeTo(null);
 		this.setVisible(true);
 		this.mainPane.setDividerLocation(0.8);
-		this.upperPane.setDividerLocation(0.8);
+		this.upperPane.setDividerLocation(0.7);
 		this.lowerPane.setDividerLocation(0.6);
 		this.ioPane.setDividerLocation(0.3);
 		this.registerPane.getColumnHeader().setVisible(false);
@@ -298,9 +298,9 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		for (int i=0; i<32; i++) {
 			rowData.add(new String[]{
 				String.format("r%d", i),
-				"0",
+				"00000000 (0)",
 				String.format("f%d", i),
-				"0.0"
+				"00000000 (0.0)"
 			});
 		}
 		
@@ -327,19 +327,28 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 				
 				// レジスタ名にマーク（末尾の半角スペース）があるレジスタ値は背景をオレンジ色に
 				boolean changed = false;
+				String str = null;
 				if (column == 1) {
-					changed = ((String)tm.getValueAt(convertRowIndexToModel(row), 0)).contains(" ");
+					str = (String)tm.getValueAt(convertRowIndexToModel(row), 0);
+					changed = (str.charAt(str.length()-1)) == ' ';
 				} else if (column == 3) {
-					changed = ((String)tm.getValueAt(convertRowIndexToModel(row), 2)).contains(" ");
+					str = (String)tm.getValueAt(convertRowIndexToModel(row), 2);
+					if (str.length() > 0)
+						changed = (str.charAt(str.length()-1)) == ' ';
+				}
+				if (changed) {
+					changed = (changed) ? true : false;
 				}
 				c.setBackground(changed ? Color.ORANGE : getBackground());
 				return c;
 			}
 		};
 		this.registerTable.getColumn("Reg1").setPreferredWidth(30);
+		this.registerTable.getColumn("Reg1").setMaxWidth(30);
 		this.registerTable.getColumn("Reg2").setPreferredWidth(30);
-		this.registerTable.getColumn("Val1").setPreferredWidth(70);
-		this.registerTable.getColumn("Val2").setPreferredWidth(70);
+		this.registerTable.getColumn("Reg2").setMaxWidth(30);
+//		this.registerTable.getColumn("Val1").setPreferredWidth(70);
+//		this.registerTable.getColumn("Val2").setPreferredWidth(70);
 		
 		this.registerTable.addMouseListener(new MouseAdapter() {
 			@Override public void mouseClicked(MouseEvent me) {
@@ -453,10 +462,10 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		for (int i=0; i<this.currentSimulation.ramsize; i+=4) { // 1行に4word表示, 全部で1024*1024word
 			rowData.add(new String[] {
 				String.format("0x%06x", i),
-				"0x00000000 (0)",
-				"0x00000000 (0)",
-				"0x00000000 (0)",
-				"0x00000000 (0)",
+				"00000000 (0)",
+				"00000000 (0)",
+				"00000000 (0)",
+				"00000000 (0)",
 				".... .... .... ...."
 			});
 		}
@@ -642,8 +651,8 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			cv = (mt.getValueAt(2, 1).equals("1") != this.currentSimulation.cv);
 			cc = (mt.getValueAt(2, 3).equals("1") != this.currentSimulation.cc);
 			for (int i=0; i<32; i++) {
-				cr[i] = !(mt.getValueAt(3+i, 1).equals(Integer.toString(this.currentSimulation.r[i])));
-				cf[i] = !(mt.getValueAt(3+i, 3).equals(Float.toString(this.currentSimulation.f[i])));
+				cr[i] = !(mt.getValueAt(3+i, 1).equals(int2hex(this.currentSimulation.r[i])));
+				cf[i] = !(mt.getValueAt(3+i, 3).equals(float2hex(this.currentSimulation.f[i])));
 			}
 		}
 		
@@ -672,15 +681,19 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			mt.addRow(new String[]{
 				String.format("r%d" + (currentSimulation.breakRegister.contains(i) ? "*" : "")
 						+ (cr[i] ? " " : ""), i),
-				Integer.toString(this.currentSimulation.r[i]),
+				int2hex(this.currentSimulation.r[i]),
 				String.format("f%d" + (currentSimulation.breakRegister.contains(i+32) ? "*" : "")
 						+ (cf[i] ? " " : ""), i),
-				Float.toString(this.currentSimulation.f[i])
+				float2hex(this.currentSimulation.f[i])
 			});
 		}
 	}
 	String int2hex(int v) {
-		return String.format("%x%07x (%d)", v>>28, v & 268435455, v);
+		return String.format("%02x%06x (%d)", (v>>24) & 0xFF, v & 0xFFFFFF, v);
+	}
+	String float2hex(float f) {
+		int a = Float.floatToIntBits(f);
+		return String.format("%02x%06x (", (a>>24) & 0xFF, a & 0xFFFFFF) + Float.toString(f) + ")";
 	}
 	public void updateMemory(int addr, final boolean coloring) {
 		// -1はオールクリア
