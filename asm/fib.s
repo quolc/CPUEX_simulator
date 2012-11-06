@@ -1,4 +1,4 @@
-	jmpi	_min_caml_start
+	jmpi[1]	_min_caml_start
 fib.10:
 	subis	r0, r2, 1
 	jmpigt	jmple_else.24
@@ -37,8 +37,8 @@ _min_caml_start: # main entry point
 	cali	fib.10
 	ldw	r31, r1, 1
 	ldw	r1, r1, 0
-	prt8	r2
-	prt4	r2
-	prt2	r2
-	prt1	r2
+	prt8[0]	r2
+	prt4[0] r2
+	prt2[0]	r2
+	prt1[0]	r2
    # main program end

@@ -34,9 +34,10 @@ public class Main {
 			boolean bin_output = false;
 			boolean asc_output = false;
 			
-			Getopt options = new Getopt("simulator", args, "aAibc");
+			Getopt options = new Getopt("simulator", args, "aAibcM:");
 			
 			int c;
+			int memory_size = -1;
 			while ((c = options.getopt()) != -1) {
 				switch(c) {
 				case 'a':
@@ -55,7 +56,13 @@ public class Main {
 				case 'c':
 					asc_output = true;
 					break;
+				case 'M':
+					memory_size = Integer.parseInt(options.getOptarg());
+					break;
 				}
+			}
+			if (memory_size != -1) {
+				simu.ramsize = memory_size;
 			}
 			
 			if (asm) {
@@ -85,17 +92,83 @@ public class Main {
 				}
 				end = java.lang.System.currentTimeMillis();
 				
-				// call統計の出力
-				for (Map.Entry<String, Integer> entry : simu.call_count.entrySet()) {
-					Utility.errPrintf("%s: %d\n", entry.getKey(), entry.getValue());
+				// 命令統計の出力
+				HashMap<OpCode, Integer> genstat = new HashMap<OpCode, Integer>();
+				HashMap<OpCode, Integer> flstat = new HashMap<OpCode, Integer>();
+				for (OpCode op : OpCode.values()) {
+					genstat.put(op, 0);
+					flstat.put(op, 0);
+				}
+				for (int i=0; i<simu.line_count.length; i++) {
+					Instruction inst = simu.program.instructions[i];
+					if (inst.fl) {
+						flstat.put(inst.opcode, flstat.get(inst.opcode) + simu.line_count[i]);
+					} else {
+						genstat.put(inst.opcode, genstat.get(inst.opcode) + simu.line_count[i]);
+					}
+				}
+				Utility.errPrintf("\n[Operation Statistics]\n");
+				for (Map.Entry<OpCode, Integer> entry : genstat.entrySet()) {
+					switch(entry.getKey()) {
+						case sqr:
+						case inv:
+						case mul:
+						case neg:
+							break;
+						default:
+							Utility.errPrintf("%s: %d\n", entry.getKey().toString(), entry.getValue());
+							break;
+					}
+				}
+				for (Map.Entry<OpCode, Integer> entry : flstat.entrySet()) {
+					switch(entry.getKey()) {
+						case add:
+						case sub:
+						case mul:
+						case inv:
+						case sqr:
+						case neg:
+							Utility.errPrintf("f%s: %d\n", entry.getKey().toString(), entry.getValue());
+							break;
+					}
 				}
 				
+				// call統計の出力
+				Utility.errPrintf("\n[Call Statistics]\n");
+				for (int i=0; i<simu.call_count.length; i++) {
+					if (simu.call_count[i] > 0) {
+						for (Map.Entry<String, Integer> entry : simu.program.labels.entrySet()) {
+							if (entry.getValue() == i) {
+								Utility.errPrintf("%s: %d\n", entry.getKey(), simu.call_count[i]);
+								break;
+							}
+						}
+					}
+				}
+				
+				// タグ統計の出力
+				Utility.errPrintf("\n[Tag Statistics]\n");
+				HashMap<String, Integer> tagstat = new HashMap<String, Integer>();
+				for (int i=0; i<simu.program.instructions.length; i++) {
+					Instruction inst = simu.program.instructions[i];
+					if (!inst.tag.equals("")) {
+						if (!tagstat.containsKey(inst.tag))
+							tagstat.put(inst.tag, 0);
+						tagstat.put(inst.tag, tagstat.get(inst.tag) + simu.line_count[i]);
+					}
+				}
+				for (Map.Entry<String, Integer> entry : tagstat.entrySet()) {
+					Utility.errPrintf("[%s]: %d\n", entry.getKey(), entry.getValue());
+				}
+				
+				// シミュレーション情報の出力
+				Utility.errPrintf("\n[Simulation Information]\n");
 				if (end-start > 0)
 					Utility.errPrintf("%d ms (%d instructions/sec)\n", end - start, simu.total / (end-start) * 1000);
 				else
 					Utility.errPrintf("%d ms (inf instructions/sec)\n", end - start);
-				
 				Utility.errPrintf("(total %d instructions executed)\n", simu.total);
+				Utility.errPrintf("(total %d instructions issued)\n", simu.issued);
 			}
 		}
 	}

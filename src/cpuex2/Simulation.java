@@ -10,7 +10,7 @@ public class Simulation implements Runnable {
 	public Program program;
 	
 	// constants
-	public static final int ramsize = 1024 * 1024; // * 4bytes
+	public static int ramsize = 1024 * 1024; // * 4bytes
 	public static final int instructionLength = 36;
 	
 	// register
@@ -28,12 +28,15 @@ public class Simulation implements Runnable {
 	public boolean error;
 	public String error_desc=null;
 	public long total;
+	public long issued;
 	Map<OpCode, Method> proc_dic;
 	
 	Instruction past;
 	int pastpc;
 	
-	public Map<String, Integer> call_count = new HashMap<String, Integer>();
+	// logとか
+	public int[] call_count;
+	public int[] line_count;
 	public ArrayList<String> missing_labels = new ArrayList<String>();
 	public boolean[] verified;
 	
@@ -306,6 +309,7 @@ public class Simulation implements Runnable {
 		this.error = false;
 		this.exit = false;
 		this.total = 0;
+		this.issued = 0;
 		
 		this.running = false;
 		this.fireable = true;
@@ -313,9 +317,11 @@ public class Simulation implements Runnable {
 		
 		this.fireEvent(SimulationEventType.INIT);
 		
-		for (String label : this.program.labels.keySet()) {
-			this.call_count.put(label, 0);
-		}
+		this.call_count = new int[this.program.instructions.length];
+		for (int i=0; i<this.call_count.length; i++) this.call_count[i] = 0;
+		this.line_count = new int[this.program.instructions.length];
+		for (int i=0; i<this.line_count.length; i++) this.line_count[i] = 0;
+		
 		this.verified = new boolean[this.program.instructions.length];
 		for (int i=0; i<this.program.instructions.length; i++)
 			this.verified[i] = false;
@@ -386,14 +392,14 @@ public class Simulation implements Runnable {
 	}
 	
 	public void step() {
-		if (total % 10000000 == 0) {
+		if (issued % 100000000 == 0 && issued > 0) {
 			long now = java.lang.System.currentTimeMillis();
 			if (now-Main.start > 0)
-				Utility.errPrintf("%d ms (%d instructions/sec)\n", now - Main.start, total / (now-Main.start) * 1000);
+				Utility.errPrintf("%d ms (%d instructions/sec)\n", now - Main.start, issued / (now-Main.start) * 1000);
 			else
 				Utility.errPrintf("%d ms (inf instructions/sec)\n", now - Main.start);
 			
-			Utility.errPrintf("(total %d instructions executed)\n", total);
+			Utility.errPrintf("(total %d instructions issued)\n", issued);
 		}
 		
 		if (this.halt || this.exit || this.error) return;
@@ -416,7 +422,6 @@ public class Simulation implements Runnable {
 		this.past = instruction;
 		this.pastpc = this.pc;
 		
-		total++;
 		boolean jumped = false;
 		
 		// condition flag
@@ -471,8 +476,13 @@ public class Simulation implements Runnable {
 			break;
 		}
 		
+		issued++;
 		if (condition) {
 			try {
+				// カウント
+				total++;
+				this.line_count[pc]++;
+				
 				// method invoke
 				Boolean ret = true;
 				switch (instruction.opcode) {
@@ -556,6 +566,9 @@ public class Simulation implements Runnable {
 					break;
 				case sqr:
 					ret = this.proc_sqr(instruction);
+					break;
+				case ctd:
+					ret = this.proc_ctd(instruction);
 					break;
 				default:
 					Method method = (Method)proc_dic.get(instruction.opcode);
@@ -1107,14 +1120,13 @@ public class Simulation implements Runnable {
 				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
 				
-				int c = this.call_count.get(label);
-				this.call_count.put(label, c+1);
-				
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					Utility.errPrintf("Invalid label %s\n", label);
 					return false;
 				}
+				
+				this.call_count[newpc]++;
 				
 				// リンクレジスタの更新
 				Opland opl = new Opland();
@@ -1291,6 +1303,24 @@ public class Simulation implements Runnable {
 			
 			set_r(i.oplands[0], v);
 		}
+		return true;
+	}
+	boolean proc_ctd(Instruction i) {
+		if (!verifyOplandPattern(i, "RR")) return false;
+		
+		int v = fetch_r(i.oplands[1]);
+		
+		int hun = v / 100;
+		int ten = (v % 100) / 10;
+		int one = (v % 10);
+		
+		set_r(i.oplands[0], ((hun + (int)'0') << 16) + ((ten + (int)'0') << 8) + ((one + (int)'0')));
+		
+		if (i.conditionset) {
+			this.cv = v < 100;
+			this.cc = v < 10;
+		}
+		
 		return true;
 	}
 	

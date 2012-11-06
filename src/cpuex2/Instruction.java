@@ -13,7 +13,8 @@ enum OpCode {
 	hlt, prt, scn,
 	nop,
 	neg, sqr,
-	sla // 整数mulを置換
+	sla, // 整数mulを置換
+	ctd,
 }
 enum Condition {
 	AL, NV, EQ, NE, MI, PL, VS, VC,
@@ -28,6 +29,7 @@ public class Instruction {
 	public boolean immediate;
 	public Opland[] oplands;
 	public String raw;
+	public String tag;
 	public boolean[] active_byte; // prt, scnでのみ使用する
 	
 	public static final int maximum_oplands = 3;
@@ -35,6 +37,7 @@ public class Instruction {
 	private Instruction() {
 		this.oplands = new Opland[maximum_oplands]; // maximum opland number = 3
 		this.active_byte = new boolean[4];
+		this.tag = "";
 	}
 	
 	// Parse assembly-line & construct an Instance of Instruction
@@ -50,8 +53,19 @@ public class Instruction {
 		if (m.find()) {
 			int i = 0;
 			
+			// tag
+			Pattern tagp = Pattern.compile("\\[.*\\]");
+			
+			String opcode = m.group();
+			
+			Matcher tagm = tagp.matcher(m.group());
+			if (tagm.find()) {
+				instruction.tag = tagm.group().substring(1, tagm.group().length() - 1);
+				opcode = opcode.substring(0, tagm.start());
+			}
+			
 			// float
-			if (m.group().charAt(i) == 'f') {
+			if (opcode.charAt(i) == 'f') {
 				instruction.fl = true;
 				i++;
 			} else {
@@ -59,7 +73,7 @@ public class Instruction {
 			}
 			
 			try {
-				instruction.opcode = OpCode.valueOf(m.group().substring(i, i+3));
+				instruction.opcode = OpCode.valueOf(opcode.substring(i, i+3));
 			} catch (Exception e) {
 				Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 				return null;
@@ -69,7 +83,7 @@ public class Instruction {
 			// prt, scnだけアセンブラ形式が特殊なので別処理
 			if (instruction.opcode == OpCode.prt || instruction.opcode == OpCode.scn) {
 				try {
-					int X = Integer.valueOf(m.group().substring(i,i+1), 16);
+					int X = Integer.valueOf(opcode.substring(i,i+1), 16);
 					for (int j=0; j<4; j++) {
 						instruction.active_byte[j] = ((X >> (3-j)) & 1) == 1;
 					}
@@ -81,7 +95,7 @@ public class Instruction {
 			}
 			
 			// immediate
-			if (m.group().length() > i && m.group().charAt(i) == 'i') {
+			if (opcode.length() > i && opcode.charAt(i) == 'i') {
 				instruction.immediate = true;
 				i++;
 			} else {
@@ -95,9 +109,9 @@ public class Instruction {
 				instruction.immediate = true;
 			
 			// condition flag
-			if (m.group().length() - i >= 2) {
+			if (opcode.length() - i >= 2) {
 				try {
-					instruction.condition = Condition.valueOf(m.group().substring(i, i+2).toUpperCase());
+					instruction.condition = Condition.valueOf(opcode.substring(i, i+2).toUpperCase());
 				} catch (Exception e) {
 					Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 					return null;
@@ -108,13 +122,13 @@ public class Instruction {
 			}
 			
 			// condition set flag
-			if (m.group().length() > i && m.group().charAt(i) == 's') {
+			if (opcode.length() > i && opcode.charAt(i) == 's') {
 				instruction.conditionset = true;
 				i++;
 			} else {
 				instruction.conditionset = false;
 			}
-			if (m.group().length() != i) {
+			if (opcode.length() != i) {
 				Utility.errPrintf("Invalid Opcode Format : %s\n", line);
 			}
 		}
@@ -305,7 +319,7 @@ public class Instruction {
 			OpCode.add, OpCode.sub, OpCode.mul, OpCode.inv,
 			OpCode.and, OpCode.oor, OpCode.nor, OpCode.xor,
 			OpCode.sll, OpCode.sla, OpCode.srl, OpCode.sra,
-			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg, OpCode.sqr
+			OpCode.hlt, OpCode.prt, OpCode.scn, OpCode.neg, OpCode.sqr, OpCode.ctd
 		};
 		boolean isr = false;
 		for (OpCode op : opr) {
@@ -337,6 +351,8 @@ public class Instruction {
 				additional = "000101";
 			else if (this.opcode == OpCode.sqr)
 				additional = "000110";
+			else if (this.opcode == OpCode.ctd)
+				additional = "000111";
 			for (int i=0; i<6; i++)
 				pattern[25+i] = additional.charAt(i);
 			
