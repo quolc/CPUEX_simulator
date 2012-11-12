@@ -93,27 +93,27 @@ public class Simulation implements Runnable {
 		this.fireEvent(SimulationEventType.BREAKPOINT);
 	}
 	public void toggleBreakRegister(String p) {
-		// r0-31 : 0-31
-		// f0-31 : 32-63
-		// cn : 64
-		// cz : 65
-		// cv : 66
-		// cc : 67
+		// r0-63 : 0-63
+		// f0-63 : 64-127
+		// cn : 128
+		// cz : 129
+		// cv : 130
+		// cc : 131
 		Integer regnum = 0;
 		if (p.charAt(0) == 'r') {
 			regnum = Integer.parseInt(p.substring(1));
 		} else if (p.charAt(0) == 'f') {
-			regnum = Integer.parseInt(p.substring(1)) + 32;
+			regnum = Integer.parseInt(p.substring(1)) + 64;
 		} else if (p.equals("Z")) {
-			regnum = 64;
+			regnum = 128;
 		} else if (p.equals("N")) {
-			regnum = 65;
+			regnum = 129;
 		} else if (p.equals("V")) {
-			regnum = 66;
+			regnum = 130;
 		} else if (p.equals("C")) {
-			regnum = 67;
+			regnum = 131;
 		} else if (p.equals("pc")) {
-			regnum = 68;
+			regnum = 132;
 		}
 		if (this.breakRegister.contains(regnum)) {
 			this.breakRegister.remove(regnum);
@@ -233,9 +233,8 @@ public class Simulation implements Runnable {
 	
 	// コンストラクタ
 	private Simulation() {
-		this.r = new int[32];
-		this.f = new float[32];
-		this.ram = new int[ramsize];
+		this.r = new int[64];
+		this.f = new float[64];
 		this.proc_dic = new HashMap<OpCode, Method>();
 		/*
 		for (OpCode code : OpCode.values()) {
@@ -273,8 +272,8 @@ public class Simulation implements Runnable {
 		int p = 0;
 		for (Instruction instruction : this.program.instructions) {
 			boolean[] pattern = instruction.makeBitPattern(this.program.labels);
-			char[] patternStr = new char[36];
-			for (int i=0; i<36; i++) patternStr[i] = pattern[i] ? '1' : '0';
+			char[] patternStr = new char[40];
+			for (int i=0; i<40; i++) patternStr[i] = pattern[i] ? '1' : '0';
 			
 			for (Map.Entry<String, Integer> entry : this.program.labels.entrySet()) {
 				if (entry.getValue() == p) {
@@ -292,7 +291,7 @@ public class Simulation implements Runnable {
 	}
 	
 	public void initialize() {
-		for (int i=0; i<32; i++) {
+		for (int i=0; i<64; i++) {
 			this.r[i] = 0;
 			this.f[i] = 0;
 		}
@@ -301,6 +300,7 @@ public class Simulation implements Runnable {
 		this.cv = false;
 		this.cc = false;
 		this.pc = 0;
+		this.ram = new int[ramsize];
 		for (int i=0; i<ramsize; i++) {
 			this.ram[i] = 0;
 		}
@@ -487,92 +487,91 @@ public class Simulation implements Runnable {
 				Boolean ret = true;
 				switch (instruction.opcode) {
 				case add:
-					ret = this.proc_add(instruction);
+					ret = proc_add(instruction);
 					break;
 				case sub:
-					ret = this.proc_sub(instruction);
-					break;
-				case mul:
-					ret = this.proc_mul(instruction);
-					break;
-				case inv:
-					ret = this.proc_inv(instruction);
-					break;
-				case and:
-					ret = this.proc_and(instruction);
-					break;
-				case oor:
-					ret = this.proc_oor(instruction);
-					break;
-				case nor:
-					ret = this.proc_nor(instruction);
-					break;
-				case xor:
-					ret = this.proc_xor(instruction);
-					break;
-				case sll:
-					ret = this.proc_sll(instruction);
+					ret = proc_sub(instruction);
 					break;
 				case sla:
-					ret = this.proc_sla(instruction);
+					ret = proc_sla(instruction);
 					break;
-				case srl:
-					ret = this.proc_srl(instruction);
+				case mul:
+					ret = proc_mul(instruction);
 					break;
 				case sra:
-					ret = this.proc_sra(instruction);
+					ret = proc_sra(instruction);
+					break;
+				case inv:
+					ret = proc_inv(instruction);
 					break;
 				case mov:
-					ret = this.proc_mov(instruction);
+					ret = proc_mov(instruction);
 					break;
 				case mif:
-					ret = this.proc_mif(instruction);
+					ret = proc_mif(instruction);
 					break;
 				case mfi:
-					ret = this.proc_mfi(instruction);
-					break;
-				case jmp:
-					ret = this.proc_jmp(instruction);
-					break;
-				case cal:
-					ret = this.proc_cal(instruction);
+					ret = proc_mfi(instruction);
 					break;
 				case ldw:
-					ret = this.proc_ldw(instruction);
-					break;
-				case stw:
-					ret = this.proc_stw(instruction);
+					ret = proc_ldw(instruction);
 					break;
 				case ldf:
-					ret = this.proc_ldf(instruction);
+					ret = proc_ldf(instruction);
+					break;
+				case stw:
+					ret = proc_stw(instruction);
 					break;
 				case stf:
-					ret = this.proc_stf(instruction);
-					break;
-				case hlt:
-					ret = this.proc_hlt(instruction);
+					ret = proc_stf(instruction);
 					break;
 				case prt:
-					ret = this.proc_prt(instruction);
+					ret = proc_prt(instruction);
 					break;
 				case scn:
-					ret = this.proc_scn(instruction);
+					ret = proc_scn(instruction);
 					break;
-				case nop:
-					ret = true;
+				case jmp:
+					ret = proc_jmp(instruction);
 					break;
-				case neg:
-					ret = this.proc_neg(instruction);
+				case cal:
+					ret = proc_cal(instruction);
 					break;
-				case sqr:
-					ret = this.proc_sqr(instruction);
+				case and:
+					ret = proc_and(instruction);
+					break;
+				case oor:
+					ret = proc_oor(instruction);
+					break;
+				case xor:
+					ret = proc_xor(instruction);
+					break;
+				case sll:
+					ret = proc_sll(instruction);
+					break;
+				case srl:
+					ret = proc_srl(instruction);
 					break;
 				case ctd:
-					ret = this.proc_ctd(instruction);
+					ret = proc_ctd(instruction);
+					break;
+				case sqr:
+					ret = proc_sqr(instruction);
+					break;
+				case neg:
+					ret = proc_neg(instruction);
+					break;
+				case mvh:
+					ret = proc_mvh(instruction);
+					break;
+				case mvl:
+					ret = proc_mvl(instruction);
 					break;
 				default:
-					Method method = (Method)proc_dic.get(instruction.opcode);
-					ret = (Boolean)method.invoke(this, instruction);
+					Utility.errPrintf("Instruction not found: %s\n", instruction.opcode.toString());
+					break;
+//					Method method = (Method)proc_dic.get(instruction.opcode);
+//					ret = (Boolean)method.invoke(this, instruction);
 				}
 				
 				if (!ret) {
@@ -615,6 +614,8 @@ public class Simulation implements Runnable {
 	void set_r(Opland o, int v) {
 		if (o.index != 0) {
 			this.r[o.index] = v;
+			if (o.index >= 32)
+				this.f[o.index] = Float.intBitsToFloat(v);
 			if (this.running)
 				this.lastModifiedRegister = o.index;
 		}
@@ -622,8 +623,10 @@ public class Simulation implements Runnable {
 	void set_f(Opland o, float v) {
 		if (o.index != 0) {
 			this.f[o.index] = v;
+			if (o.index >= 32)
+				this.r[o.index] = Float.floatToIntBits(v);
 			if (this.running)
-				this.lastModifiedRegister = o.index+32;
+				this.lastModifiedRegister = o.index+64;
 		}
 	}
 	
@@ -658,6 +661,8 @@ public class Simulation implements Runnable {
 	}
 	
 	// Instructions
+	
+	// arithmetic
 	boolean proc_add(Instruction i) {
 		if (i.fl) {
 			float a, b, c;
@@ -768,6 +773,37 @@ public class Simulation implements Runnable {
 				cv = false;
 				cc = false;
 			}
+			return false;
+		}
+		return true;
+	}
+	boolean proc_sla(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a << b;
+			if (FPU.bit_check(a, 31)) {
+				FPU.bit_set(c, 31);
+			} else {
+				FPU.bit_clear(c, 31);
+			}
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
+			}
 		}
 		return true;
 	}
@@ -805,224 +841,7 @@ public class Simulation implements Runnable {
 				cc = false;
 			}
 			// TODO: ここまでデバッグ用
-//			return false; // 整数divは実装しない
-		}
-		return true;
-	}
-	boolean proc_neg(Instruction i) {
-		if (i.fl) {
-			float a, c;
-			if (!verifyOplandPattern(i, "FF")) return false;
-			a = fetch_f(i.oplands[1]);
-			c = FPU.fneg(a);
-			set_f(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
-				cc = false;
-			}
-		} else {
-			return false;
-		}
-		return true;
-	}
-	boolean proc_sqr(Instruction i) {
-		if (i.fl) {
-			float a, c;
-			if (!verifyOplandPattern(i, "FF")) return false;
-			a = fetch_f(i.oplands[1]);
-			c = FPU.fsqr(a);
-			set_f(i.oplands[0], c);
-			if (i.conditionset) {
-				
-			}
-		} else {
-			return false;
-		}
-		return true;
-	}
-	
-	boolean proc_and(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a & b;
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = false;
-			}
-		}
-		return true;
-	}
-	boolean proc_oor(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a | b;
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = false;
-			}
-		}
-		return true;
-	}
-	boolean proc_nor(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = ~(a | b);
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = false;
-			}
-		}
-		return true;
-	}
-	boolean proc_xor(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a ^ b;
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = false;
-			}
-		}
-		return true;
-	}
-	
-	boolean proc_sll(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a << b;
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
-			}
-		}
-		return true;
-	}
-	
-	boolean proc_sla(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a << b;
-			if (FPU.bit_check(a, 31)) {
-				FPU.bit_set(c, 31);
-			} else {
-				FPU.bit_clear(c, 31);
-			}
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
-			}
-		}
-		return true;
-	}
-	
-	boolean proc_srl(Instruction i) {
-		if (i.fl) {
-			return false;
-		} else {
-			int a, b, c;
-			if (i.immediate) {
-				if (!verifyOplandPattern(i, "RRI")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = i.oplands[2].immediate;
-			} else {
-				if (!verifyOplandPattern(i, "RRR")) return false;
-				a = fetch_r(i.oplands[1]);
-				b = fetch_r(i.oplands[2]);
-			}
-			c = a >>> b;
-			set_r(i.oplands[0], c);
-			if (i.conditionset) {
-				cz = (c == 0);
-				cn = (c < 0);
-				cv = false;
-				cc = ((a >> (b-1)) & 1) == 1;
-			}
+			return false; // 整数divは実装しない
 		}
 		return true;
 	}
@@ -1052,43 +871,165 @@ public class Simulation implements Runnable {
 		return true;
 	}
 	
-	boolean proc_mov(Instruction i) {
-		if (i.fl) {
-			float a;
-			if (!verifyOplandPattern(i, "FF")) return false;
-			a = fetch_f(i.oplands[1]);
-			set_f(i.oplands[0], a);
-		} else {
-			int a;
-			if (!verifyOplandPattern(i, "RR")) return false;
-			a = fetch_r(i.oplands[1]);
-			set_r(i.oplands[0], a);
-		}
-		return true;
-	}
-	boolean proc_mif(Instruction i) {
+	// memory
+	boolean proc_ldw(Instruction i) {
 		if (i.fl) {
 			return false;
 		} else {
-			int a;
-			if (!verifyOplandPattern(i, "FR")) return false;
-			a = fetch_r(i.oplands[1]);
-			set_f(i.oplands[0], Float.intBitsToFloat(a));
+			if (!verifyOplandPattern(i, "RRI")) return false;
+			int addr = fetch_r(i.oplands[1]);
+			int offset = i.oplands[2].immediate;
+			addr += offset;
+			
+			try {
+				int value = ram[addr];
+				set_r(i.oplands[0], value);
+			} catch (Exception e) {
+				Utility.errPrintf("Memory Index Out of Bound. at %d\n", i.raw);
+				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
+				return false;
+			}
 		}
 		return true;
 	}
-	boolean proc_mfi(Instruction i) {
+	boolean proc_stw(Instruction i) {
 		if (i.fl) {
 			return false;
 		} else {
-			float a;
-			if (!verifyOplandPattern(i, "RF")) return false;
-			a = fetch_f(i.oplands[1]);
-			set_r(i.oplands[0], Float.floatToIntBits(a));
+			if (!verifyOplandPattern(i, "RRI")) return false;
+			int addr = fetch_r(i.oplands[1]);
+			int offset = i.oplands[2].immediate;
+			addr += offset;
+			
+			try {
+				int value = fetch_r(i.oplands[0]);
+				ram[addr] = value;
+			} catch (Exception e) {
+				Utility.errPrintf("Memory Index Out of Bound. <%s> addr: %d\n", i.raw, addr);
+				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
+				return false;
+			}
+			
+			if (this.mode == 1) {
+				if (!this.updatedAddr.contains(addr))
+					this.updatedAddr.add(addr);
+				this.fireEvent(SimulationEventType.MEMORY);
+			}
+			if (this.running)
+				this.lastModifiedMemory = addr;
 		}
 		return true;
 	}
-
+	boolean proc_ldf(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		try {
+			float value = Float.intBitsToFloat(ram[addr]);
+			set_f(i.oplands[0], value);
+		} catch (Exception e) {
+			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
+			return false;	
+		}
+		
+		return true;
+	}
+	boolean proc_stf(Instruction i) {
+		if (!verifyOplandPattern(i, "FRI")) return false;
+		int addr = fetch_r(i.oplands[1]);
+		int offset = i.oplands[2].immediate;
+		addr += offset;
+		
+		try {
+			float src = fetch_f(i.oplands[0]);
+			ram[addr] = Float.floatToIntBits(src);
+		} catch (Exception e)  {
+			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
+			return false;
+		}
+		
+		if (this.mode == 1) {
+			if (!this.updatedAddr.contains(addr))
+				this.updatedAddr.add(addr);
+			this.fireEvent(SimulationEventType.MEMORY);
+		}
+		if (this.running)
+			this.lastModifiedMemory = addr;
+		
+		return true;
+	}
+	
+	// io
+	boolean proc_prt(Instruction i) {
+		int v = 0;
+		if (i.fl) {
+			if (!verifyOplandPattern(i, "NFI")) return false;
+			
+			v = Float.floatToIntBits(fetch_f(i.oplands[1]));
+			
+		} else {
+			if (!verifyOplandPattern(i, "NRI")) return false;
+			v = fetch_r(i.oplands[1]);
+		}
+		
+		byte output = 0;
+		
+		int active = i.oplands[2].immediate;
+		if ((active & 8) > 0) output = (byte)((v >> 24) & 255);
+		if ((active & 4) > 0) output = (byte)((v >> 16) & 255);
+		if ((active & 2) > 0) output = (byte)((v >> 8) & 255);
+		if ((active & 1) > 0) output = (byte)((v >> 0) & 255);
+		
+		Utility.output(output);
+		this.fireEvent(SimulationEventType.PRINT, output);
+		
+		return true;
+	}
+	boolean proc_scn(Instruction i) {
+		if (i.fl){
+			return false;
+		} else {
+			if (!verifyOplandPattern(i, "RRI")) return false;
+			
+			int input = 0;
+			switch (mode) {
+			case 0:
+				try {
+					input = System.in.read();
+				} catch (Exception e) {
+					input = -1;
+				}
+				break;
+			case 1:
+				try {
+					input = this.inputStream.read();
+				} catch (Exception e) {
+					input = -1;
+				}
+				break;
+			}
+			if (input == -1) {
+				this.cc = true;
+				return true;
+			} else {
+				this.cc = false;
+			}
+			
+			int v = fetch_r(i.oplands[1]);
+			int active = i.oplands[2].immediate;
+			if ((active & 8) > 0) v = (v & (0x00FFFFFF)) + (input << 24);
+			if ((active & 4) > 0) v = (v & (0xFF00FFFF)) + (input << 16);
+			if ((active & 2) > 0) v = (v & (0xFFFF00FF)) + (input << 8);
+			if ((active & 1) > 0) v = (v & (0xFFFFFF00)) + (input);
+			
+			set_r(i.oplands[0], v);
+		}
+		return true;
+	}
+	
+	// branch
 	boolean proc_jmp(Instruction i) {
 		if (i.fl) {
 			return false;
@@ -1097,6 +1038,9 @@ public class Simulation implements Runnable {
 				if (!verifyOplandPattern(i, "J")) return false;
 				String label = i.oplands[0].label;
 //				Utility.printf("\nJump to the label %s\n", label);
+				if (label.contains("hlt_here_"))
+					halt = true;
+				
 				Integer newpc = program.labels.get(label);
 				if (newpc == null) {
 					Utility.errPrintf("Invalid label %s\n", label);
@@ -1151,160 +1095,134 @@ public class Simulation implements Runnable {
 		return true;
 	}
 	
-	boolean proc_ldw(Instruction i) {
+	// logic
+	boolean proc_and(Instruction i) {
 		if (i.fl) {
 			return false;
 		} else {
-			if (!verifyOplandPattern(i, "RRI")) return false;
-			int addr = fetch_r(i.oplands[1]);
-			int offset = i.oplands[2].immediate;
-			addr += offset;
-			
-			try {
-				int value = ram[addr];
-				set_r(i.oplands[0], value);
-			} catch (Exception e) {
-				Utility.errPrintf("Memory Index Out of Bound. at %d\n", i.raw);
-				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
-				return false;
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a & b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = false;
 			}
 		}
 		return true;
 	}
-	boolean proc_stw(Instruction i) {
+	boolean proc_oor(Instruction i) {
 		if (i.fl) {
 			return false;
 		} else {
-			if (!verifyOplandPattern(i, "RRI")) return false;
-			int addr = fetch_r(i.oplands[1]);
-			int offset = i.oplands[2].immediate;
-			addr += offset;
-			
-			try {
-				int value = fetch_r(i.oplands[0]);
-				ram[addr] = value;
-			} catch (Exception e) {
-				Utility.errPrintf("Memory Index Out of Bound. at %d\n", i.raw);
-				this.fireEvent(SimulationEventType.ERROR, "Index out of bound.");
-				return false;
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
 			}
-			
-			if (this.mode == 1) {
-				if (!this.updatedAddr.contains(addr))
-					this.updatedAddr.add(addr);
-				this.fireEvent(SimulationEventType.MEMORY);
+			c = a | b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = false;
 			}
-			if (this.running)
-				this.lastModifiedMemory = addr;
 		}
 		return true;
 	}
-
-	boolean proc_ldf(Instruction i) {
-		if (!verifyOplandPattern(i, "FRI")) return false;
-		int addr = fetch_r(i.oplands[1]);
-		int offset = i.oplands[2].immediate;
-		addr += offset;
-		
-		try {
-			float value = Float.intBitsToFloat(ram[addr]);
-			set_f(i.oplands[0], value);
-		} catch (Exception e) {
-			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
-			return false;	
-		}
-		
-		return true;
-	}
-	boolean proc_stf(Instruction i) {
-		if (!verifyOplandPattern(i, "FRI")) return false;
-		int addr = fetch_r(i.oplands[1]);
-		int offset = i.oplands[2].immediate;
-		addr += offset;
-		
-		try {
-			float src = fetch_f(i.oplands[0]);
-			ram[addr] = Float.floatToIntBits(src);
-		} catch (Exception e)  {
-			Utility.errPrintf("Memory Index Out of Bound. at %d\n");
+	boolean proc_xor(Instruction i) {
+		if (i.fl) {
 			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a ^ b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = false;
+			}
 		}
-		
-		if (this.mode == 1) {
-			if (!this.updatedAddr.contains(addr))
-				this.updatedAddr.add(addr);
-			this.fireEvent(SimulationEventType.MEMORY);
+		return true;
+	}
+	boolean proc_sll(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a << b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = ((a >> (32-b)) & 1) == 1; // 追い出されるビットのうち最下位のもの
+			}
 		}
-		if (this.running)
-			this.lastModifiedMemory = addr;
-		
+		return true;
+	}
+	boolean proc_srl(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a, b, c;
+			if (i.immediate) {
+				if (!verifyOplandPattern(i, "RRI")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = i.oplands[2].immediate;
+			} else {
+				if (!verifyOplandPattern(i, "RRR")) return false;
+				a = fetch_r(i.oplands[1]);
+				b = fetch_r(i.oplands[2]);
+			}
+			c = a >>> b;
+			set_r(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv = false;
+				cc = ((a >> (b-1)) & 1) == 1;
+			}
+		}
 		return true;
 	}
 	
-	boolean proc_prt(Instruction i) {
-		int v = 0;
-		if (i.fl) {
-			if (!verifyOplandPattern(i, "NF")) return false;
-			
-			v = Float.floatToIntBits(fetch_f(i.oplands[1]));
-			
-		} else {
-			if (!verifyOplandPattern(i, "NR")) return false;
-			v = fetch_r(i.oplands[1]);
-		}
-		
-		byte output = 0;
-		
-		if (i.active_byte[0]) output = (byte)((v >> 24) & 255);
-		if (i.active_byte[1]) output = (byte)((v >> 16) & 255);
-		if (i.active_byte[2]) output = (byte)((v >> 8) & 255);
-		if (i.active_byte[3]) output = (byte)((v >> 0) & 255);
-		
-		Utility.output(output);
-		this.fireEvent(SimulationEventType.PRINT, output);
-		
-		return true;
-	}
-	boolean proc_scn(Instruction i) {
-		if (i.fl){
-			return false;
-		} else {
-			if (!verifyOplandPattern(i, "RR")) return false;
-			
-			int input = 0;
-			switch (mode) {
-			case 0:
-				try {
-					input = System.in.read();
-				} catch (Exception e) {
-					return false;
-				}
-				break;
-			case 1:
-				try {
-					input = this.inputStream.read();
-				} catch (Exception e) {
-					return false;
-				}
-				break;
-			}
-			if (input == -1) {
-				this.cc = true;
-				return true;
-			} else {
-				this.cc = false;
-			}
-			
-			int v = fetch_r(i.oplands[1]);
-			if (i.active_byte[0]) v = (v & (0x00FFFFFF)) + (input << 24);
-			if (i.active_byte[1]) v = (v & (0xFF00FFFF)) + (input << 16);
-			if (i.active_byte[2]) v = (v & (0xFFFF00FF)) + (input << 8);
-			if (i.active_byte[3]) v = (v & (0xFFFFFF00)) + (input);
-			
-			set_r(i.oplands[0], v);
-		}
-		return true;
-	}
+	// extension
 	boolean proc_ctd(Instruction i) {
 		if (!verifyOplandPattern(i, "RR")) return false;
 		
@@ -1323,11 +1241,107 @@ public class Simulation implements Runnable {
 		
 		return true;
 	}
-	
-	boolean proc_hlt(Instruction i) {
-		Utility.errPrintf("Program is halted by hlt instruction\n");
-		this.halt = true;
-		this.fireEvent(SimulationEventType.HALT);
+	boolean proc_sqr(Instruction i) {
+		if (i.fl) {
+			float a, c;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			c = FPU.fsqr(a);
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+	boolean proc_neg(Instruction i) {
+		if (i.fl) {
+			float a, c;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			c = FPU.fneg(a);
+			set_f(i.oplands[0], c);
+			if (i.conditionset) {
+				cz = (c == 0);
+				cn = (c < 0);
+				cv =  (c == Float.NEGATIVE_INFINITY || c == Float.POSITIVE_INFINITY);
+				cc = false;
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+
+	// move
+	boolean proc_mov(Instruction i) {
+		if (i.fl) {
+			float a;
+			if (!verifyOplandPattern(i, "FF")) return false;
+			a = fetch_f(i.oplands[1]);
+			set_f(i.oplands[0], a);
+		} else {
+			int a;
+			if (!verifyOplandPattern(i, "RR")) return false;
+			a = fetch_r(i.oplands[1]);
+			set_r(i.oplands[0], a);
+		}
+		return true;
+	}
+	boolean proc_mif(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			int a;
+			if (!verifyOplandPattern(i, "FR")) return false;
+			a = fetch_r(i.oplands[1]);
+			set_f(i.oplands[0], Float.intBitsToFloat(a));
+		}
+		return true;
+	}
+	boolean proc_mfi(Instruction i) {
+		if (i.fl) {
+			return false;
+		} else {
+			float a;
+			if (!verifyOplandPattern(i, "RF")) return false;
+			a = fetch_f(i.oplands[1]);
+			set_r(i.oplands[0], Float.floatToIntBits(a));
+		}
+		return true;
+	}
+	boolean proc_mvh(Instruction i) {
+		if (i.fl){
+			if (!verifyOplandPattern(i, "FNI")) return false;
+			int a = Float.floatToIntBits(fetch_f(i.oplands[0])); // rdから取り出す
+			int imm = i.oplands[2].immediate;
+			int b = (a & 65535) + (imm << 16);
+			set_f(i.oplands[0], Float.intBitsToFloat(b));
+		} else {
+			if (!verifyOplandPattern(i, "RNI")) return false;
+			int a = fetch_r(i.oplands[0]); // rdから取り出す
+			int imm = i.oplands[2].immediate;
+			int b = (a & 65535) + (imm << 16);
+			set_r(i.oplands[0], b);
+		}
+		return true;
+	}
+	boolean proc_mvl(Instruction i) {
+		if (i.fl){
+			if (!verifyOplandPattern(i, "FNI")) return false;
+			int a = Float.floatToIntBits(fetch_f(i.oplands[0])); // rdから取り出す
+			int imm = i.oplands[2].immediate;
+			int b = (a & ~65535) + imm;
+			set_f(i.oplands[0], Float.intBitsToFloat(b));
+		} else {
+			if (!verifyOplandPattern(i, "RNI")) return false;
+			int a = fetch_r(i.oplands[0]); // rdから取り出す
+			int imm = i.oplands[2].immediate;
+			int b = (a & ~65535) + imm;
+			set_r(i.oplands[0], b);
+		}
 		return true;
 	}
 }

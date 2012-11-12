@@ -13,26 +13,17 @@ public class Main {
 		if (args.length == 0) {
 			MainFrame frame = MainFrame.getInstance();
 		} else {
-			Utility.showOnTerminal = true;
-			
-			Simulation simu = Simulation.createSimulation(new File(args[args.length-1]));
-			if (simu == null) return;
-			
-			// display missing labels
-			for (String label : simu.missing_labels) {
-				Utility.errPrintf("Missing Label: %s\n", label);
-			}
-			
-			simu.initialize();
-			simu.fireable = false;
-			simu.mode = 0;
-			
 			// アセンブラ
 			boolean asm = false;
 			boolean ruby = false;
 			boolean int_output = false;
 			boolean bin_output = false;
 			boolean asc_output = false;
+
+			Utility.showOnTerminal = true;
+			
+			Simulation simu = Simulation.createSimulation(new File(args[args.length-1]));
+			if (simu == null) return;
 			
 			Getopt options = new Getopt("simulator", args, "aAibcM:");
 			
@@ -64,6 +55,15 @@ public class Main {
 			if (memory_size != -1) {
 				simu.ramsize = memory_size;
 			}
+			
+			// display missing labels
+			for (String label : simu.missing_labels) {
+				Utility.errPrintf("Missing Label: %s\n", label);
+			}
+			
+			simu.initialize();
+			simu.fireable = false;
+			simu.mode = 0;
 			
 			if (asm) {
 				try {
@@ -110,10 +110,13 @@ public class Main {
 				Utility.errPrintf("\n[Operation Statistics]\n");
 				for (Map.Entry<OpCode, Integer> entry : genstat.entrySet()) {
 					switch(entry.getKey()) {
+						case mov:
 						case sqr:
 						case inv:
 						case mul:
 						case neg:
+						case nop:
+						case hlt:
 							break;
 						default:
 							Utility.errPrintf("%s: %d\n", entry.getKey().toString(), entry.getValue());
@@ -128,6 +131,9 @@ public class Main {
 						case inv:
 						case sqr:
 						case neg:
+						case mvh:
+						case mvl:
+						case mov:
 							Utility.errPrintf("f%s: %d\n", entry.getKey().toString(), entry.getValue());
 							break;
 					}

@@ -45,6 +45,11 @@ public class Program {
 					Instruction instruction = Instruction.parseLine(line);
 					if (instruction == null) return null;
 					instructions.add(instruction);
+					// hlt用のラベル挿入
+					if (instruction.opcode == OpCode.hlt) {
+						String label = String.format("hlt_here_%d", instructions.size()-1);
+						program.labels.put(label, instructions.size()-1);
+					}
 				} else { // label
 					line = line.trim();
 					Utility.errPrintf(line+"\n");
@@ -57,8 +62,9 @@ public class Program {
 				}
 			}
 			
-			// マクロの処理 ... subi, mov
-			for (Instruction instruction : instructions) {
+			// マクロの処理 ... subi, mov, nop, hlt
+			for (int i=0; i<instructions.size(); i++) {
+				Instruction instruction = instructions.get(i);
 				if (instruction.opcode == OpCode.sub && !instruction.fl && instruction.immediate) {
 					instruction.opcode = OpCode.add;
 					instruction.oplands[2].immediate = -instruction.oplands[2].immediate;
@@ -69,6 +75,28 @@ public class Program {
 					instruction.oplands[2] = new Opland();
 					instruction.oplands[2].type = OplandType.I;
 					instruction.oplands[2].immediate = 0;
+				}
+				if (instruction.opcode == OpCode.nop) {
+					instruction.opcode = OpCode.add;
+					instruction.immediate = true;
+					instruction.oplands[0] = new Opland();
+					instruction.oplands[0].type = OplandType.R;
+					instruction.oplands[0].index = 0;
+					instruction.oplands[1] = new Opland();
+					instruction.oplands[1].type = OplandType.R;
+					instruction.oplands[1].index = 0;
+					instruction.oplands[2] = new Opland();
+					instruction.oplands[2].type = OplandType.I;
+					instruction.oplands[2].immediate = 0;
+				}
+				
+				// TODO hlt
+				if (instruction.opcode == OpCode.hlt) {
+					instruction.opcode = OpCode.jmp;
+					instruction.immediate = true;
+					instruction.oplands[0] = new Opland();
+					instruction.oplands[0].type = OplandType.J;
+					instruction.oplands[0].label = String.format("hlt_here_%d", i);
 				}
 			}
 			

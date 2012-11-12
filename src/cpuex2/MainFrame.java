@@ -295,7 +295,7 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		rowData.add(new String[] {
 			"V", "0", "C", "0"
 		});
-		for (int i=0; i<32; i++) {
+		for (int i=0; i<64; i++) {
 			rowData.add(new String[]{
 				String.format("r%d", i),
 				"00000000 (0)",
@@ -641,16 +641,16 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 		
 		// change detection
 		boolean cz = false, cn = false, cv = false, cc = false;
-		boolean[] cr = new boolean[32];
-		for (int i=0; i<32; i++) cr[i] = false;
-		boolean[] cf = new boolean[32];
-		for (int i=0; i<32; i++) cf[i] = false;
+		boolean[] cr = new boolean[64];
+		for (int i=0; i<64; i++) cr[i] = false;
+		boolean[] cf = new boolean[64];
+		for (int i=0; i<64; i++) cf[i] = false;
 		if (coloring) {
 			cz = (mt.getValueAt(1, 1).equals("1") != this.currentSimulation.cz);
 			cn = (mt.getValueAt(1, 3).equals("1") != this.currentSimulation.cn);
 			cv = (mt.getValueAt(2, 1).equals("1") != this.currentSimulation.cv);
 			cc = (mt.getValueAt(2, 3).equals("1") != this.currentSimulation.cc);
-			for (int i=0; i<32; i++) {
+			for (int i=0; i<64; i++) {
 				cr[i] = !(mt.getValueAt(3+i, 1).equals(int2hex(this.currentSimulation.r[i])));
 				cf[i] = !(mt.getValueAt(3+i, 3).equals(float2hex(this.currentSimulation.f[i])));
 			}
@@ -677,12 +677,12 @@ public class MainFrame extends JFrame implements ActionListener, SimulationEvent
 			"C" + (currentSimulation.breakRegister.contains(67) ? "*" : "") + (cc ? " " : ""),
 			this.currentSimulation.cc ? "1" : "0"
 		});
-		for (int i=0; i<32; i++) {
+		for (int i=0; i<64; i++) {
 			mt.addRow(new String[]{
 				String.format("r%d" + (currentSimulation.breakRegister.contains(i) ? "*" : "")
 						+ (cr[i] ? " " : ""), i),
 				int2hex(this.currentSimulation.r[i]),
-				String.format("f%d" + (currentSimulation.breakRegister.contains(i+32) ? "*" : "")
+				String.format("f%d" + (currentSimulation.breakRegister.contains(i+64) ? "*" : "")
 						+ (cf[i] ? " " : ""), i),
 				float2hex(this.currentSimulation.f[i])
 			});
